@@ -13,7 +13,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=VT323&family=UnifrakturMaguntia&family=Comic+Neue:wght@400;700&family=Permanent+Marker&family=Pacifico&family=Press+Start+2P&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=UnifrakturMaguntia&family=Comic+Neue:wght@400;700&family=Permanent+Marker&family=Pacifico&family=Press+Start+2P&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -36,10 +37,21 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2vmin;
-    padding: 3vmin;
+    gap: 1.4vmin;
+    padding: 2.5vmin;
   }
 
+  #fx-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 40;
+  }
+
+  /* ---------- Digital klocka ---------- */
+  #digital-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.8vmin; touch-action: pan-y; }
   #digital-clock {
     font-family: 'VT323', 'Courier New', monospace;
     color: var(--fg, #f8fafc);
@@ -47,13 +59,31 @@
     letter-spacing: 0.06em;
     line-height: 1;
     font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    gap: 0.15em;
   }
+  #digital-clock.style-flip { gap: 1.2vmin; font-family: 'Courier New', monospace; }
+  .flip-card {
+    background: color-mix(in srgb, var(--fg, #f8fafc) 16%, transparent);
+    border-radius: 0.16em;
+    padding: 0.1em 0.22em;
+    position: relative;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+    font-weight: 700;
+  }
+  .flip-card::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 2px;
+    background: var(--bg, #0f172a);
+    opacity: 0.55;
+  }
+  .flip-colon { opacity: 0.7; padding: 0 0.05em; }
 
-  #clock-wrap {
-    width: min(64vmin, 84vw);
-    height: min(64vmin, 84vw);
-    flex-shrink: 0;
-  }
+  /* ---------- Analog klocka ---------- */
+  #clock-wrap { width: min(60vmin, 82vw); height: min(60vmin, 82vw); flex-shrink: 0; touch-action: pan-y; }
   #clock { width: 100%; height: 100%; display: block; }
   #clock .tick { stroke: var(--fg, #f8fafc); }
   #clock .tick-hour { stroke-width: 2.4; }
@@ -62,6 +92,48 @@
   #clock .rim { stroke: var(--fg, #f8fafc); fill: none; opacity: 0.35; }
   #clock .hand { stroke: var(--fg, #f8fafc); stroke-linecap: round; }
   #clock .hub { fill: var(--fg, #f8fafc); }
+  #clock .monogram { fill: var(--fg, #f8fafc); font-family: 'Playfair Display', serif; }
+  #clock .monogram-ring { stroke: var(--fg, #f8fafc); fill: none; opacity: 0.6; }
+
+  #clock.style-neon .tick,
+  #clock.style-neon .hand,
+  #clock.style-neon .hub,
+  #clock.style-neon .number {
+    filter: drop-shadow(0 0 3px var(--fg, #f8fafc)) drop-shadow(0 0 9px var(--fg, #f8fafc));
+  }
+  #clock.style-neon .rim { opacity: 0.7; filter: drop-shadow(0 0 5px var(--fg, #f8fafc)); }
+  #clock.style-minimal .tick-hour { stroke-width: 1.6; }
+  #clock.style-luxury .number { font-family: 'Playfair Display', serif; font-weight: 700; }
+  #clock.style-luxury .hand { stroke-width: 2; }
+  #clock.style-luxury .rim { opacity: 0.5; }
+
+  /* ---------- Karusell-prickar ---------- */
+  .style-dots { display: flex; gap: 0.9vmin; }
+  .style-dots .dot {
+    width: clamp(6px, 1vmin, 9px);
+    height: clamp(6px, 1vmin, 9px);
+    border-radius: 50%;
+    background: var(--fg, #f8fafc);
+    opacity: 0.3;
+  }
+  .style-dots .dot.active { opacity: 0.95; }
+
+  #style-toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.65);
+    color: #fff;
+    padding: 1.4vmin 3vmin;
+    border-radius: 999px;
+    font-size: clamp(1rem, 2.6vmin, 1.4rem);
+    z-index: 45;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  #style-toast.show { opacity: 1; }
 
   #names {
     display: flex;
@@ -72,32 +144,21 @@
     max-width: 92vw;
     color: var(--fg, #f8fafc);
     font-weight: 700;
-    font-size: clamp(1.4rem, 5vmin, 3rem);
-    min-height: 1.4em;
+    font-size: clamp(1.3rem, 4.6vmin, 2.8rem);
+    min-height: 1.3em;
   }
   #names .sep { opacity: 0.6; font-weight: 400; }
 
-  /* ---------- Inställningar ---------- */
-  #settings-btn {
+  /* ---------- Visningsläge ---------- */
+  #app.mode-analog #digital-wrap { display: none; }
+  #app.mode-digital #clock-wrap,
+  #app.mode-digital #clock-dots { display: none; }
+  #app.mode-digital #digital-clock { font-size: clamp(3rem, 15vmin, 8.5rem); }
+  #app.mode-analog #clock-wrap { width: min(76vmin, 90vw); height: min(76vmin, 90vw); }
+
+  /* ---------- Knappar ---------- */
+  #settings-btn, #fullscreen-btn, #qr-btn {
     position: fixed;
-    top: 1.6vmin;
-    right: 1.6vmin;
-    width: clamp(40px, 6vmin, 56px);
-    height: clamp(40px, 6vmin, 56px);
-    border-radius: 50%;
-    border: 1px solid rgba(128,128,128,0.4);
-    background: rgba(128,128,128,0.15);
-    color: var(--fg, #f8fafc);
-    font-size: clamp(1.1rem, 3vmin, 1.6rem);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  #fullscreen-btn {
-    position: fixed;
-    bottom: 1.6vmin;
-    left: 1.6vmin;
     width: clamp(40px, 6vmin, 56px);
     height: clamp(40px, 6vmin, 56px);
     border-radius: 50%;
@@ -110,8 +171,11 @@
     align-items: center;
     justify-content: center;
   }
+  #settings-btn { top: 1.6vmin; right: 1.6vmin; }
+  #fullscreen-btn { bottom: 1.6vmin; left: 1.6vmin; }
+  #qr-btn { bottom: 1.6vmin; right: 1.6vmin; }
 
-  /* ---------- Måltidsnedräkning (valfri, övre vänstra hörnet) ---------- */
+  /* ---------- Måltidsnedräkning ---------- */
   #meal-timer {
     position: fixed;
     top: 1.6vmin;
@@ -125,49 +189,29 @@
     line-height: 1.3;
   }
   #meal-timer.hidden { display: none; }
-  #meal-label {
-    font-size: clamp(0.75rem, 1.8vmin, 1rem);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    opacity: 0.75;
-  }
-  #meal-countdown {
-    font-size: clamp(1.1rem, 3vmin, 1.6rem);
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
+  #meal-label { font-size: clamp(0.75rem, 1.8vmin, 1rem); text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.75; }
+  #meal-countdown { font-size: clamp(1.1rem, 3vmin, 1.6rem); font-weight: 700; font-variant-numeric: tabular-nums; }
 
-  .overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.72);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 50;
-  }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; z-index: 50; }
   .overlay.hidden { display: none; }
 
   #settings-panel {
     background: #1e293b;
     color: #f8fafc;
     border-radius: 18px;
-    padding: 4vmin;
-    width: min(90vw, 420px);
+    padding: 3.4vmin;
+    width: min(92vw, 440px);
+    max-height: 88vh;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 2.2vmin;
+    gap: 1.9vmin;
     box-shadow: 0 10px 40px rgba(0,0,0,0.5);
   }
-  #settings-panel h2 { margin: 0 0 0.4em; font-size: 1.3rem; }
-  #settings-panel label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5em;
-    font-size: 0.95rem;
-    color: #cbd5e1;
-  }
-  #settings-panel input[type="text"] {
+  #settings-panel h2 { margin: 0 0 0.2em; font-size: 1.25rem; }
+  #settings-panel h3 { margin: 0.4em 0 -0.6em; font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; }
+  #settings-panel label { display: flex; flex-direction: column; gap: 0.5em; font-size: 0.95rem; color: #cbd5e1; }
+  #settings-panel input[type="text"], #settings-panel input[type="time"] {
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.2);
     color: #f8fafc;
@@ -183,32 +227,16 @@
     border-radius: 10px;
     font-size: 1.05rem;
   }
-  #settings-panel select option {
-    background: #111827;
-  }
-  #settings-panel input[type="color"] {
-    width: 100%;
-    height: 42px;
-    border: none;
-    border-radius: 10px;
-    background: none;
-    padding: 0;
-    cursor: pointer;
-  }
+  #settings-panel select option { background: #111827; }
+  #settings-panel input[type="color"] { width: 100%; height: 42px; border: none; border-radius: 10px; background: none; padding: 0; cursor: pointer; }
   .color-row { display: flex; gap: 2vmin; }
   .color-row label { flex: 1; }
-  .checkbox-row {
-    flex-direction: row !important;
-    align-items: center;
-    gap: 1em !important;
-  }
-  .checkbox-row input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    accent-color: #f97316;
-  }
-  #settings-panel button {
-    margin-top: 0.6em;
+  .time-row { display: flex; gap: 2vmin; }
+  .time-row label { flex: 1; }
+  .checkbox-row { flex-direction: row !important; align-items: center; gap: 1em !important; }
+  .checkbox-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: #f97316; }
+  #settings-panel button.primary {
+    margin-top: 0.4em;
     background: #f97316;
     color: #111827;
     border: none;
@@ -220,50 +248,16 @@
   }
 
   /* ---------- Tangentbord (påskägg) ---------- */
-  #keyboard-panel {
-    background: #1e293b;
-    color: #f8fafc;
-    border-radius: 18px;
-    padding: 3vmin;
-    width: min(94vw, 640px);
-    display: flex;
-    flex-direction: column;
-    gap: 1.6vmin;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-  }
-  #kb-display {
-    background: rgba(255,255,255,0.08);
-    border-radius: 12px;
-    padding: 1.4vmin;
-    min-height: 1.6em;
-    font-size: clamp(1.1rem, 3vmin, 1.6rem);
-    text-align: center;
-    letter-spacing: 0.08em;
-  }
-  .kb-row {
-    display: flex;
-    justify-content: center;
-    gap: 0.6vmin;
-    flex-wrap: wrap;
-  }
-  .kb-key {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.15);
-    color: #f8fafc;
-    border-radius: 8px;
-    padding: 1.6vmin 0;
-    flex: 1 1 0;
-    min-width: 24px;
-    max-width: 60px;
-    font-size: clamp(0.9rem, 2.4vmin, 1.2rem);
-    cursor: pointer;
-  }
+  #keyboard-panel { background: #1e293b; color: #f8fafc; border-radius: 18px; padding: 3vmin; width: min(94vw, 640px); display: flex; flex-direction: column; gap: 1.6vmin; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+  #kb-display { background: rgba(255,255,255,0.08); border-radius: 12px; padding: 1.4vmin; min-height: 1.6em; font-size: clamp(1.1rem, 3vmin, 1.6rem); text-align: center; letter-spacing: 0.08em; }
+  .kb-row { display: flex; justify-content: center; gap: 0.6vmin; flex-wrap: wrap; }
+  .kb-key { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; border-radius: 8px; padding: 1.6vmin 0; flex: 1 1 0; min-width: 24px; max-width: 60px; font-size: clamp(0.9rem, 2.4vmin, 1.2rem); cursor: pointer; }
   .kb-key:active { background: rgba(255,255,255,0.25); }
   .kb-key.wide { flex: 3 1 0; max-width: none; }
   .kb-key.close { background: rgba(239,68,68,0.25); }
 
-  /* ---------- Citat-overlay ---------- */
-  #quote-panel {
+  /* ---------- Citat / QR-panel ---------- */
+  #quote-panel, #qr-panel {
     background: #1e293b;
     color: #f8fafc;
     border-radius: 18px;
@@ -272,19 +266,13 @@
     text-align: center;
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 1.6vmin;
     box-shadow: 0 10px 40px rgba(0,0,0,0.5);
   }
-  #quote-text {
-    font-size: clamp(1.2rem, 3.6vmin, 1.9rem);
-    font-style: italic;
-    line-height: 1.4;
-  }
-  #quote-author {
-    font-size: clamp(0.9rem, 2.2vmin, 1.1rem);
-    color: #cbd5e1;
-  }
-  #quote-panel button {
+  #quote-text { font-size: clamp(1.2rem, 3.6vmin, 1.9rem); font-style: italic; line-height: 1.4; }
+  #quote-author { font-size: clamp(0.9rem, 2.2vmin, 1.1rem); color: #cbd5e1; }
+  #quote-panel button, #qr-panel button {
     align-self: center;
     margin-top: 0.6em;
     background: #f97316;
@@ -295,6 +283,9 @@
     border-radius: 999px;
     cursor: pointer;
   }
+  #qr-canvas { background: #fff; border-radius: 12px; padding: 2vmin; }
+  #qr-hint { font-size: 0.95rem; color: #cbd5e1; }
+  #qr-error { font-size: 0.9rem; color: #fca5a5; display: none; }
 
   #wake-warning {
     position: fixed;
@@ -309,11 +300,19 @@
 </style>
 </head>
 <body>
+<canvas id="fx-canvas"></canvas>
+
 <div id="app">
-  <div id="digital-clock"></div>
+  <div id="digital-wrap">
+    <div id="digital-clock"></div>
+    <div class="style-dots" id="digital-dots"></div>
+  </div>
+
   <div id="clock-wrap">
     <svg id="clock" viewBox="0 0 200 200"></svg>
   </div>
+  <div class="style-dots" id="clock-dots"></div>
+
   <div id="names">
     <span id="name1"></span>
     <span id="sep" class="sep" style="display:none;">&amp;</span>
@@ -321,8 +320,11 @@
   </div>
 </div>
 
+<div id="style-toast"></div>
+
 <button id="fullscreen-btn" title="Helskärm">⛶</button>
 <button id="settings-btn" title="Inställningar">⚙️</button>
+<button id="qr-btn" title="Visdomsord">🔳</button>
 <div id="wake-warning"></div>
 
 <div id="meal-timer" class="hidden">
@@ -333,35 +335,43 @@
 <div class="overlay hidden" id="settings-overlay">
   <div id="settings-panel">
     <h2>Inställningar</h2>
+
     <div class="color-row">
-      <label>Bakgrundsfärg
-        <input type="color" id="bg-color" />
-      </label>
-      <label>Förgrundsfärg
-        <input type="color" id="fg-color" />
-      </label>
+      <label>Bakgrundsfärg <input type="color" id="bg-color" /></label>
+      <label>Förgrundsfärg <input type="color" id="fg-color" /></label>
     </div>
-    <label>Namn 1
-      <input type="text" id="name1-input" maxlength="24" placeholder="t.ex. Anna" />
-    </label>
-    <label>Namn 2 (valfritt)
-      <input type="text" id="name2-input" maxlength="24" placeholder="t.ex. Erik" />
-    </label>
-    <label>Typsnitt för namnen
-      <select id="name-font-select"></select>
-    </label>
-    <label class="checkbox-row">
-      <input type="checkbox" id="same-font-toggle" />
-      Samma typsnitt för namn och digitalklocka
-    </label>
-    <label id="clock-font-row">Typsnitt för digitalklockan
-      <select id="clock-font-select"></select>
-    </label>
-    <label class="checkbox-row">
-      <input type="checkbox" id="meal-toggle" />
-      Visa nedräkning till frukost/lunch/fika
-    </label>
-    <button id="settings-close">Klar</button>
+
+    <label>Namn 1 <input type="text" id="name1-input" maxlength="24" placeholder="t.ex. Anna" /></label>
+    <label>Namn 2 (valfritt) <input type="text" id="name2-input" maxlength="24" placeholder="t.ex. Erik" /></label>
+    <label>Typsnitt för namnen <select id="name-font-select"></select></label>
+    <label class="checkbox-row"><input type="checkbox" id="same-font-toggle" /> Samma typsnitt för namn och digitalklocka</label>
+    <label id="clock-font-row">Typsnitt för digitalklockan (vanlig stil) <select id="clock-font-select"></select></label>
+
+    <h3>Visning</h3>
+    <label>Visa <select id="display-mode-select">
+      <option value="both">Analog och digital</option>
+      <option value="analog">Bara analog</option>
+      <option value="digital">Bara digital</option>
+    </select></label>
+    <label>Urtavlestil (analog) <select id="clock-style-select"></select></label>
+    <label>Digitalklockans stil <select id="digital-style-select"></select></label>
+    <label>Monogram (för lyxig urtavla) <input type="text" id="monogram-input" maxlength="3" placeholder="t.ex. RB" /></label>
+    <p style="margin:-0.6em 0 0; font-size:0.85rem; color:#94a3b8;">Tips: du kan också svepa direkt på klockan för att byta stil.</p>
+
+    <h3>Raster</h3>
+    <div class="time-row">
+      <label>Frukost <input type="time" id="frukost-time" /></label>
+      <label>Lunch <input type="time" id="lunch-time" /></label>
+      <label>Fika <input type="time" id="fika-time" /></label>
+    </div>
+    <label class="checkbox-row"><input type="checkbox" id="meal-toggle" /> Visa nedräkning till nästa rast</label>
+    <label class="checkbox-row"><input type="checkbox" id="meal-sound-toggle" /> Spela ljud när en rast börjar</label>
+
+    <h3>Övrigt</h3>
+    <label class="checkbox-row"><input type="checkbox" id="seasonal-toggle" /> Visa säsongseffekter (snö, konfetti m.m.)</label>
+    <label>Extra fest-dag (valfritt, format MM-DD) <input type="text" id="special-date-input" placeholder="t.ex. 04-12" maxlength="5" /></label>
+
+    <button class="primary" id="settings-close">Klar</button>
   </div>
 </div>
 
@@ -387,13 +397,18 @@
   </div>
 </div>
 
+<div class="overlay hidden" id="qr-overlay">
+  <div id="qr-panel">
+    <h2 style="margin:0;">Skanna för ett visdomsord</h2>
+    <canvas id="qr-canvas"></canvas>
+    <div id="qr-hint">Rikta en annan enhets kamera mot koden</div>
+    <div id="qr-error">Kunde inte skapa QR-koden. Kontrollera att plattan har internetuppkoppling.</div>
+    <button id="qr-close">Stäng</button>
+  </div>
+</div>
+
 <script>
-/* ============ Citat (påskägg vid "Stockholm") ============
-   Kort urval, verifierade mot flera oberoende källor. Vilhelm Mobergs
-   välkända KORTA citat är få (det mesta som cirkulerar är antingen
-   längre stycken eller osäkert belagt), så listan lutar mot Astrid
-   Lindgren. Byt/utöka gärna i arrayen nedan om du hittar fler du
-   själv verifierat. */
+/* ============ Citat (påskägg vid "Stockholm") ============ */
 const quotes = [
   { text: "Man bör leva sitt liv så man blir vän med döden.", author: "Astrid Lindgren" },
   { text: "Ge barnen kärlek, mera kärlek och ännu mera kärlek.", author: "Astrid Lindgren" },
@@ -407,7 +422,7 @@ const quotes = [
   { text: "Ta vara på ditt liv, för nu är det din stund på jorden.", author: "Vilhelm Moberg, Din stund på jorden" }
 ];
 
-/* ============ Inställningar (sparas lokalt i webbläsaren) ============ */
+/* ============ Typsnitt (namn + "vanlig" digitalstil) ============ */
 const FONT_OPTIONS = [
   { id: "standard", label: "Standard", family: "'Segoe UI', system-ui, -apple-system, Roboto, sans-serif" },
   { id: "digital", label: "Digitalur (VT323)", family: "'VT323', 'Courier New', monospace" },
@@ -418,15 +433,39 @@ const FONT_OPTIONS = [
   { id: "retro", label: "Retro-tv", family: "'Press Start 2P', monospace" }
 ];
 
+/* ============ Urtavlestilar (svepbara) ============ */
+const CLOCK_STYLES = [
+  { id: "classic", label: "Klassisk" },
+  { id: "minimal", label: "Minimalistisk" },
+  { id: "neon", label: "Neon" },
+  { id: "luxury", label: "Lyxig" }
+];
+
+const DIGITAL_STYLES = [
+  { id: "plain", label: "Vanlig" },
+  { id: "flip", label: "Flip-klocka" }
+];
+
+/* ============ Inställningar (sparas lokalt i webbläsaren) ============ */
 const defaults = {
   bg: "#0f172a",
   fg: "#f8fafc",
   name1: "",
   name2: "",
-  showMealTimer: false,
   nameFont: "standard",
   clockFont: "digital",
-  sameFont: false
+  sameFont: false,
+  displayMode: "both",
+  clockStyle: "classic",
+  digitalStyle: "plain",
+  monogram: "",
+  showMealTimer: false,
+  mealSound: false,
+  frukostTime: "09:00",
+  lunchTime: "12:00",
+  fikaTime: "14:30",
+  seasonalEffects: true,
+  specialDate: ""
 };
 
 function loadSettings() {
@@ -438,16 +477,22 @@ function loadSettings() {
     return { ...defaults };
   }
 }
-
 function saveSettings(s) {
-  try {
-    localStorage.setItem("klocka-settings", JSON.stringify(s));
-  } catch (e) {
-    console.log("Kunde inte spara inställningar:", e);
-  }
+  try { localStorage.setItem("klocka-settings", JSON.stringify(s)); }
+  catch (e) { console.log("Kunde inte spara inställningar:", e); }
 }
 
 let settings = loadSettings();
+
+function getMonogramText() {
+  const m = (settings.monogram || "").trim();
+  if (m) return m.toUpperCase().slice(0, 3);
+  const n1 = settings.name1.trim();
+  const n2 = settings.name2.trim();
+  if (n1 && n2) return (n1[0] + n2[0]).toUpperCase();
+  if (n1) return n1.slice(0, 2).toUpperCase();
+  return "❖";
+}
 
 function applySettings() {
   document.documentElement.style.setProperty("--bg", settings.bg);
@@ -456,7 +501,6 @@ function applySettings() {
   const name1El = document.getElementById("name1");
   const name2El = document.getElementById("name2");
   const sepEl = document.getElementById("sep");
-
   const n1 = settings.name1.trim();
   const n2 = settings.name2.trim();
 
@@ -464,29 +508,42 @@ function applySettings() {
     name1El.textContent = n1;
     name2El.textContent = n2;
     sepEl.style.display = "inline";
-    document.getElementById("names").style.justifyContent = "center";
   } else if (n1 || n2) {
     name1El.textContent = n1 || n2;
     name2El.textContent = "";
     sepEl.style.display = "none";
-    document.getElementById("names").style.justifyContent = "center";
   } else {
     name1El.textContent = "";
     name2El.textContent = "";
     sepEl.style.display = "none";
   }
 
-  document.getElementById("meal-timer").classList.toggle("hidden", !settings.showMealTimer);
-
   const nameFontDef = FONT_OPTIONS.find((f) => f.id === settings.nameFont) || FONT_OPTIONS[0];
   document.getElementById("names").style.fontFamily = nameFontDef.family;
 
   const clockFontId = settings.sameFont ? settings.nameFont : settings.clockFont;
   const clockFontDef = FONT_OPTIONS.find((f) => f.id === clockFontId) || FONT_OPTIONS[0];
-  document.getElementById("digital-clock").style.fontFamily = clockFontDef.family;
-}
+  if (settings.digitalStyle === "plain") {
+    document.getElementById("digital-clock").style.fontFamily = clockFontDef.family;
+  }
 
-applySettings();
+  document.getElementById("meal-timer").classList.toggle("hidden", !settings.showMealTimer);
+
+  const appEl = document.getElementById("app");
+  appEl.classList.remove("mode-both", "mode-analog", "mode-digital");
+  appEl.classList.add("mode-" + settings.displayMode);
+
+  const clockEl = document.getElementById("clock");
+  CLOCK_STYLES.forEach((s) => clockEl.classList.remove("style-" + s.id));
+  clockEl.classList.add("style-" + settings.clockStyle);
+
+  const digitalEl = document.getElementById("digital-clock");
+  DIGITAL_STYLES.forEach((s) => digitalEl.classList.remove("style-" + s.id));
+  digitalEl.classList.add("style-" + settings.digitalStyle);
+
+  buildClockFace(settings.clockStyle);
+  renderStyleDots();
+}
 
 /* ============ Rita analog klocka ============ */
 const svgNS = "http://www.w3.org/2000/svg";
@@ -499,201 +556,368 @@ function el(tag, attrs) {
   for (const k in attrs) e.setAttribute(k, attrs[k]);
   return e;
 }
-
 function polar(cx, cy, r, angleDeg) {
   const rad = ((angleDeg - 90) * Math.PI) / 180;
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
-function buildClockFace() {
+function buildClockFace(styleId) {
   clockSvg.innerHTML = "";
   clockSvg.appendChild(el("circle", { class: "rim", cx: CENTER, cy: CENTER, r: RADIUS, "stroke-width": 1.5 }));
 
-  // 60 minutmarkeringar
+  const drawMinuteTicks = styleId !== "minimal";
   for (let i = 0; i < 60; i++) {
-    const angle = i * 6;
     const isHour = i % 5 === 0;
+    if (!isHour && !drawMinuteTicks) continue;
+    const angle = i * 6;
     const outer = polar(CENTER, CENTER, RADIUS - 2, angle);
     const inner = polar(CENTER, CENTER, RADIUS - (isHour ? 12 : 6), angle);
-    clockSvg.appendChild(
-      el("line", {
-        class: "tick " + (isHour ? "tick-hour" : "tick-min"),
-        x1: outer.x, y1: outer.y, x2: inner.x, y2: inner.y
-      })
-    );
+    clockSvg.appendChild(el("line", {
+      class: "tick " + (isHour ? "tick-hour" : "tick-min"),
+      x1: outer.x, y1: outer.y, x2: inner.x, y2: inner.y
+    }));
   }
 
-  // Siffror 1-12
-  for (let n = 1; n <= 12; n++) {
-    const angle = n * 30;
-    const pos = polar(CENTER, CENTER, RADIUS - 22, angle);
-    const text = el("text", {
-      class: "number",
-      x: pos.x, y: pos.y + 5,
-      "text-anchor": "middle",
-      "font-size": "14"
-    });
-    text.textContent = n;
-    clockSvg.appendChild(text);
+  const showNumbers = styleId !== "minimal";
+  if (showNumbers) {
+    for (let n = 1; n <= 12; n++) {
+      const angle = n * 30;
+      const pos = polar(CENTER, CENTER, RADIUS - 22, angle);
+      const text = el("text", { class: "number", x: pos.x, y: pos.y + 5, "text-anchor": "middle", "font-size": "14" });
+      text.textContent = n;
+      clockSvg.appendChild(text);
+    }
   }
 
-  // Visare
+  if (styleId === "luxury") {
+    clockSvg.appendChild(el("circle", { class: "monogram-ring", cx: CENTER, cy: CENTER + 34, r: 16, "stroke-width": 1 }));
+    const mono = el("text", { class: "monogram", x: CENTER, y: CENTER + 39, "text-anchor": "middle", "font-size": "13" });
+    mono.textContent = getMonogramText();
+    clockSvg.appendChild(mono);
+  }
+
   clockSvg.appendChild(el("line", { id: "hand-hour", class: "hand", x1: CENTER, y1: CENTER, x2: CENTER, y2: CENTER - 46, "stroke-width": 5 }));
   clockSvg.appendChild(el("line", { id: "hand-minute", class: "hand", x1: CENTER, y1: CENTER, x2: CENTER, y2: CENTER - 68, "stroke-width": 3.5 }));
   clockSvg.appendChild(el("line", { id: "hand-second", class: "hand", x1: CENTER, y1: CENTER, x2: CENTER, y2: CENTER - 74, "stroke-width": 1.4, opacity: 0.85 }));
   clockSvg.appendChild(el("circle", { class: "hub", cx: CENTER, cy: CENTER, r: 4 }));
 }
 
-buildClockFace();
+buildClockFace(settings.clockStyle);
 
-function updateClockHands() {
-  const now = new Date();
+function updateClockHands(now) {
   const h = now.getHours() % 12;
   const m = now.getMinutes();
   const s = now.getSeconds();
-
   const hourAngle = h * 30 + m * 0.5;
   const minuteAngle = m * 6 + s * 0.1;
   const secondAngle = s * 6;
-
   document.getElementById("hand-hour").setAttribute("transform", `rotate(${hourAngle} ${CENTER} ${CENTER})`);
   document.getElementById("hand-minute").setAttribute("transform", `rotate(${minuteAngle} ${CENTER} ${CENTER})`);
   document.getElementById("hand-second").setAttribute("transform", `rotate(${secondAngle} ${CENTER} ${CENTER})`);
-
-  const hh = String(now.getHours()).padStart(2, "0");
-  const mm = String(m).padStart(2, "0");
-  const ss = String(s).padStart(2, "0");
-  document.getElementById("digital-clock").textContent = `${hh}:${mm}:${ss}`;
 }
 
-updateClockHands();
-setInterval(updateClockHands, 1000);
+/* ============ Digitalklocka (vanlig / flip) ============ */
+function renderDigitalClock(now) {
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  const container = document.getElementById("digital-clock");
 
-/* ============ Måltidsnedräkning ============
-   07:00–09:00 -> räknar ner till Frukost (09:00)
-   09:00–12:00 -> räknar ner till Lunch   (12:00)
-   12:00–14:30 -> räknar ner till Fika    (14:30)
-   14:30–07:00 (nästa dygn) -> vilar, väntar till kl 07:00 då cykeln
-   börjar om med en ny nedräkning till Frukost. */
+  if (settings.digitalStyle === "flip") {
+    container.innerHTML = "";
+    [hh, mm, ss].forEach((pair, i) => {
+      const card = document.createElement("span");
+      card.className = "flip-card";
+      card.textContent = pair;
+      container.appendChild(card);
+      if (i < 2) {
+        const colon = document.createElement("span");
+        colon.className = "flip-colon";
+        colon.textContent = ":";
+        container.appendChild(colon);
+      }
+    });
+  } else {
+    container.textContent = `${hh}:${mm}:${ss}`;
+  }
+}
+
+function tickClock() {
+  const now = new Date();
+  updateClockHands(now);
+  renderDigitalClock(now);
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+/* ============ Måltidsnedräkning + ljudsignal ============
+   Räknar alltid ner till nästa rast bland Frukost/Lunch/Fika (oavsett
+   inbördes ordning på klockslagen). När dagens sista rast passerat
+   vilar den till morgondagens första rast. */
 function atTime(base, h, m) {
   const d = new Date(base);
   d.setHours(h, m, 0, 0);
   return d;
 }
-
-function getMealState(now) {
-  const t7 = atTime(now, 7, 0);
-  const t9 = atTime(now, 9, 0);
-  const t12 = atTime(now, 12, 0);
-  const t1430 = atTime(now, 14, 30);
-
-  if (now >= t7 && now < t9) {
-    return { active: true, label: "Frukost", target: t9 };
-  }
-  if (now >= t9 && now < t12) {
-    return { active: true, label: "Lunch", target: t12 };
-  }
-  if (now >= t12 && now < t1430) {
-    return { active: true, label: "Fika", target: t1430 };
-  }
-  // Vilofas: innan 07:00 idag, eller efter 14:30 -> väntar till 07:00
-  // (idag om vi inte hunnit dit än, annars imorgon).
-  let resumeAt = t7;
-  if (now >= t1430) {
-    resumeAt = atTime(now, 7, 0);
-    resumeAt.setDate(resumeAt.getDate() + 1);
-  }
-  return { active: false, resumeAt };
+function parseTimeToday(hhmm, base) {
+  const parts = (hhmm || "00:00").split(":").map(Number);
+  return atTime(base, parts[0] || 0, parts[1] || 0);
 }
-
+function formatHM(date) {
+  return String(date.getHours()).padStart(2, "0") + ":" + String(date.getMinutes()).padStart(2, "0");
+}
 function formatHMS(ms) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
   return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
 }
 
-function updateMealTimer() {
-  if (!settings.showMealTimer) return;
+function getMealEvents(now) {
+  return [
+    { label: "Frukost", target: parseTimeToday(settings.frukostTime, now) },
+    { label: "Lunch", target: parseTimeToday(settings.lunchTime, now) },
+    { label: "Fika", target: parseTimeToday(settings.fikaTime, now) }
+  ].sort((a, b) => a.target - b.target);
+}
+
+function getMealState(now) {
+  const events = getMealEvents(now);
+  const upcoming = events.find((e) => e.target > now);
+  if (upcoming) return { active: true, label: upcoming.label, target: upcoming.target };
+  const tomorrowFirst = new Date(events[0].target);
+  tomorrowFirst.setDate(tomorrowFirst.getDate() + 1);
+  return { active: false, resumeAt: tomorrowFirst, nextLabel: events[0].label };
+}
+
+let audioCtx = null;
+function ensureAudioContext() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { console.log("AudioContext ej tillgänglig:", e); }
+  }
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+document.addEventListener("pointerdown", ensureAudioContext, { once: true });
+
+function playChime() {
+  if (!settings.mealSound || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  [880, 660].forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, now + i * 0.18);
+    gain.gain.exponentialRampToValueAtTime(0.3, now + i * 0.18 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.18 + 0.5);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now + i * 0.18);
+    osc.stop(now + i * 0.18 + 0.55);
+  });
+}
+
+const firedMeals = {};
+function checkMealSound(now, events) {
+  const todayStr = now.toDateString();
+  events.forEach((ev) => {
+    const diff = now - ev.target;
+    const key = ev.label;
+    if (diff >= 0 && diff < 2000 && firedMeals[key] !== todayStr) {
+      firedMeals[key] = todayStr;
+      playChime();
+    }
+  });
+}
+
+function updateMealCycle() {
   const now = new Date();
+  const events = getMealEvents(now);
+  checkMealSound(now, events);
+
+  if (!settings.showMealTimer) return;
   const state = getMealState(now);
   const labelEl = document.getElementById("meal-label");
   const countEl = document.getElementById("meal-countdown");
-
   if (state.active) {
     labelEl.textContent = "Till " + state.label;
     countEl.textContent = formatHMS(state.target - now);
   } else {
-    labelEl.textContent = "Nästa nedräkning";
-    countEl.textContent = "kl 07:00";
+    labelEl.textContent = "Nästa: " + state.nextLabel;
+    countEl.textContent = "imorgon " + formatHM(state.resumeAt);
+  }
+}
+updateMealCycle();
+setInterval(updateMealCycle, 1000);
+
+/* ============ Säsongseffekter ============ */
+const fxCanvas = document.getElementById("fx-canvas");
+const fxCtx = fxCanvas.getContext("2d");
+function resizeFxCanvas() {
+  fxCanvas.width = window.innerWidth;
+  fxCanvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resizeFxCanvas);
+resizeFxCanvas();
+
+let particles = [];
+let currentEffect = null;
+
+function getSeasonalEffect(now) {
+  if (!settings.seasonalEffects) return null;
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+  if ((month === 12 && day === 31) || (month === 1 && day === 1)) return "confetti";
+  if (settings.specialDate) {
+    const m = settings.specialDate.match(/^(\d{1,2})-(\d{1,2})$/);
+    if (m && Number(m[1]) === month && Number(m[2]) === day) return "confetti";
+  }
+  if (month === 12 || (month === 1 && day <= 6)) return "snow";
+  return null;
+}
+
+function initParticles(effect) {
+  particles = [];
+  if (!effect) return;
+  const count = effect === "snow" ? 70 : 90;
+  for (let i = 0; i < count; i++) {
+    if (effect === "snow") {
+      particles.push({
+        type: "snow",
+        x: Math.random() * fxCanvas.width,
+        y: Math.random() * fxCanvas.height,
+        r: 1.5 + Math.random() * 2.5,
+        speedY: 0.4 + Math.random() * 0.9,
+        speedX: (Math.random() - 0.5) * 0.5,
+        opacity: 0.35 + Math.random() * 0.5
+      });
+    } else {
+      particles.push({
+        type: "confetti",
+        x: Math.random() * fxCanvas.width,
+        y: Math.random() * -fxCanvas.height,
+        w: 5 + Math.random() * 5,
+        h: 8 + Math.random() * 6,
+        speedY: 1.5 + Math.random() * 2,
+        speedX: (Math.random() - 0.5) * 1.5,
+        rot: Math.random() * 360,
+        rotSpeed: (Math.random() - 0.5) * 8,
+        color: ["#f97316", "#fb923c", "#facc15", "#38bdf8", "#f472b6", "#a3e635"][Math.floor(Math.random() * 6)]
+      });
+    }
   }
 }
 
-updateMealTimer();
-setInterval(updateMealTimer, 1000);
+function refreshSeasonalEffect() {
+  const eff = getSeasonalEffect(new Date());
+  if (eff !== currentEffect) {
+    currentEffect = eff;
+    initParticles(eff);
+  }
+}
+refreshSeasonalEffect();
+setInterval(refreshSeasonalEffect, 30000);
 
-/* ============ Inställningspanel ============ */
-const settingsOverlay = document.getElementById("settings-overlay");
-const bgInput = document.getElementById("bg-color");
-const fgInput = document.getElementById("fg-color");
-const name1Input = document.getElementById("name1-input");
-const name2Input = document.getElementById("name2-input");
-const mealToggle = document.getElementById("meal-toggle");
-const nameFontSelect = document.getElementById("name-font-select");
-const clockFontSelect = document.getElementById("clock-font-select");
-const sameFontToggle = document.getElementById("same-font-toggle");
-const clockFontRow = document.getElementById("clock-font-row");
+function animateFx() {
+  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  if (currentEffect) {
+    particles.forEach((p) => {
+      if (p.type === "snow") {
+        p.y += p.speedY;
+        p.x += p.speedX;
+        if (p.y > fxCanvas.height) { p.y = -5; p.x = Math.random() * fxCanvas.width; }
+        fxCtx.beginPath();
+        fxCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        fxCtx.fillStyle = `rgba(255,255,255,${p.opacity})`;
+        fxCtx.fill();
+      } else {
+        p.y += p.speedY;
+        p.x += p.speedX;
+        p.rot += p.rotSpeed;
+        if (p.y > fxCanvas.height + 20) {
+          p.y = -20;
+          p.x = Math.random() * fxCanvas.width;
+        }
+        fxCtx.save();
+        fxCtx.translate(p.x, p.y);
+        fxCtx.rotate((p.rot * Math.PI) / 180);
+        fxCtx.fillStyle = p.color;
+        fxCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        fxCtx.restore();
+      }
+    });
+  }
+  requestAnimationFrame(animateFx);
+}
+requestAnimationFrame(animateFx);
 
-function buildFontSelect(selectEl) {
-  selectEl.innerHTML = "";
-  FONT_OPTIONS.forEach((f) => {
-    const opt = document.createElement("option");
-    opt.value = f.id;
-    opt.textContent = f.label;
-    opt.style.fontFamily = f.family;
-    opt.style.fontSize = "1.1rem";
-    selectEl.appendChild(opt);
+/* ============ Svepbara stilkaruseller ============ */
+function renderStyleDots() {
+  const clockDots = document.getElementById("clock-dots");
+  clockDots.innerHTML = "";
+  CLOCK_STYLES.forEach((s) => {
+    const d = document.createElement("div");
+    d.className = "dot" + (s.id === settings.clockStyle ? " active" : "");
+    clockDots.appendChild(d);
+  });
+
+  const digitalDots = document.getElementById("digital-dots");
+  digitalDots.innerHTML = "";
+  DIGITAL_STYLES.forEach((s) => {
+    const d = document.createElement("div");
+    d.className = "dot" + (s.id === settings.digitalStyle ? " active" : "");
+    digitalDots.appendChild(d);
   });
 }
-buildFontSelect(nameFontSelect);
-buildFontSelect(clockFontSelect);
 
-function updateClockFontRowVisibility() {
-  clockFontRow.style.display = sameFontToggle.checked ? "none" : "flex";
-}
-sameFontToggle.addEventListener("change", updateClockFontRowVisibility);
-
-function openSettings() {
-  bgInput.value = settings.bg;
-  fgInput.value = settings.fg;
-  name1Input.value = settings.name1;
-  name2Input.value = settings.name2;
-  mealToggle.checked = settings.showMealTimer;
-  nameFontSelect.value = settings.nameFont;
-  clockFontSelect.value = settings.clockFont;
-  sameFontToggle.checked = settings.sameFont;
-  updateClockFontRowVisibility();
-  settingsOverlay.classList.remove("hidden");
+let toastTimer = null;
+function showStyleToast(text) {
+  const toast = document.getElementById("style-toast");
+  toast.textContent = text;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 900);
 }
 
-document.getElementById("settings-btn").addEventListener("click", openSettings);
-
-document.getElementById("settings-close").addEventListener("click", () => {
-  settings = {
-    bg: bgInput.value,
-    fg: fgInput.value,
-    name1: name1Input.value,
-    name2: name2Input.value,
-    showMealTimer: mealToggle.checked,
-    nameFont: nameFontSelect.value,
-    clockFont: clockFontSelect.value,
-    sameFont: sameFontToggle.checked
-  };
+function cycleClockStyle(dir) {
+  const idx = CLOCK_STYLES.findIndex((s) => s.id === settings.clockStyle);
+  const next = CLOCK_STYLES[(idx + dir + CLOCK_STYLES.length) % CLOCK_STYLES.length];
+  settings.clockStyle = next.id;
   saveSettings(settings);
   applySettings();
-  settingsOverlay.classList.add("hidden");
-});
+  showStyleToast(next.label);
+}
+
+function cycleDigitalStyle(dir) {
+  const idx = DIGITAL_STYLES.findIndex((s) => s.id === settings.digitalStyle);
+  const next = DIGITAL_STYLES[(idx + dir + DIGITAL_STYLES.length) % DIGITAL_STYLES.length];
+  settings.digitalStyle = next.id;
+  saveSettings(settings);
+  applySettings();
+  showStyleToast(next.label);
+}
+
+/* Enkel pekgest-hantering: skiljer på tryck (påskägg) och svep (byt stil) */
+function bindGestures(elm, { onTap, onSwipeLeft, onSwipeRight }) {
+  let startX = 0, startY = 0, tracking = false;
+  elm.addEventListener("pointerdown", (e) => {
+    startX = e.clientX; startY = e.clientY; tracking = true;
+  });
+  elm.addEventListener("pointerup", (e) => {
+    if (!tracking) return;
+    tracking = false;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) onSwipeLeft && onSwipeLeft();
+      else onSwipeRight && onSwipeRight();
+    } else if (Math.abs(dx) < 12 && Math.abs(dy) < 12) {
+      onTap && onTap();
+    }
+  });
+  elm.addEventListener("pointercancel", () => { tracking = false; });
+}
 
 /* ============ Påskägg: 5 tryck på klockan -> tangentbord ============ */
 let tapCount = 0;
@@ -701,7 +925,7 @@ let lastTapTime = 0;
 const TAP_RESET_MS = 2500;
 const TAP_TARGET = 5;
 
-document.getElementById("clock-wrap").addEventListener("click", () => {
+function handleClockTap() {
   const now = Date.now();
   if (now - lastTapTime > TAP_RESET_MS) tapCount = 0;
   lastTapTime = now;
@@ -710,18 +934,23 @@ document.getElementById("clock-wrap").addEventListener("click", () => {
     tapCount = 0;
     openKeyboard();
   }
+}
+
+bindGestures(document.getElementById("clock-wrap"), {
+  onTap: handleClockTap,
+  onSwipeLeft: () => cycleClockStyle(1),
+  onSwipeRight: () => cycleClockStyle(-1)
+});
+bindGestures(document.getElementById("digital-wrap"), {
+  onSwipeLeft: () => cycleDigitalStyle(1),
+  onSwipeRight: () => cycleDigitalStyle(-1)
 });
 
 /* ============ Skärmtangentbord ============ */
 const keyboardOverlay = document.getElementById("keyboard-overlay");
 const kbDisplay = document.getElementById("kb-display");
 let kbBuffer = "";
-
-const KB_ROWS = [
-  "QWERTYUIOPÅ",
-  "ASDFGHJKLÖÄ",
-  "ZXCVBNM"
-];
+const KB_ROWS = ["QWERTYUIOPÅ", "ASDFGHJKLÖÄ", "ZXCVBNM"];
 
 function buildKeyboard() {
   KB_ROWS.forEach((row, i) => {
@@ -743,7 +972,6 @@ function handleKey(ch) {
   kbDisplay.textContent = kbBuffer;
   checkEasterEgg();
 }
-
 document.getElementById("kb-space").addEventListener("click", () => handleKey(" "));
 document.getElementById("kb-back").addEventListener("click", () => {
   kbBuffer = kbBuffer.slice(0, -1);
@@ -756,9 +984,7 @@ function openKeyboard() {
   kbDisplay.textContent = "";
   keyboardOverlay.classList.remove("hidden");
 }
-function closeKeyboard() {
-  keyboardOverlay.classList.add("hidden");
-}
+function closeKeyboard() { keyboardOverlay.classList.add("hidden"); }
 
 function checkEasterEgg() {
   if (kbBuffer.toLowerCase().includes("stockholm")) {
@@ -777,9 +1003,132 @@ function showRandomQuote() {
   document.getElementById("quote-author").textContent = "— " + q.author;
   quoteOverlay.classList.remove("hidden");
 }
-document.getElementById("quote-close").addEventListener("click", () => {
-  quoteOverlay.classList.add("hidden");
+document.getElementById("quote-close").addEventListener("click", () => quoteOverlay.classList.add("hidden"));
+
+/* ============ QR-kod: visdomsord på en annan enhet ============ */
+const qrOverlay = document.getElementById("qr-overlay");
+document.getElementById("qr-btn").addEventListener("click", () => {
+  qrOverlay.classList.remove("hidden");
+  const canvas = document.getElementById("qr-canvas");
+  const errorEl = document.getElementById("qr-error");
+  errorEl.style.display = "none";
+  try {
+    const url = new URL("ordsprak.html", window.location.href).href;
+    if (typeof QRCode === "undefined") throw new Error("QRCode-biblioteket kunde inte laddas");
+    QRCode.toCanvas(canvas, url, { width: 220, margin: 1 }, (err) => {
+      if (err) { console.log("QR-fel:", err); errorEl.style.display = "block"; }
+    });
+  } catch (e) {
+    console.log("QR-fel:", e);
+    errorEl.style.display = "block";
+  }
 });
+document.getElementById("qr-close").addEventListener("click", () => qrOverlay.classList.add("hidden"));
+
+/* ============ Inställningspanel ============ */
+const settingsOverlay = document.getElementById("settings-overlay");
+const bgInput = document.getElementById("bg-color");
+const fgInput = document.getElementById("fg-color");
+const name1Input = document.getElementById("name1-input");
+const name2Input = document.getElementById("name2-input");
+const mealToggle = document.getElementById("meal-toggle");
+const mealSoundToggle = document.getElementById("meal-sound-toggle");
+const nameFontSelect = document.getElementById("name-font-select");
+const clockFontSelect = document.getElementById("clock-font-select");
+const sameFontToggle = document.getElementById("same-font-toggle");
+const clockFontRow = document.getElementById("clock-font-row");
+const displayModeSelect = document.getElementById("display-mode-select");
+const clockStyleSelect = document.getElementById("clock-style-select");
+const digitalStyleSelect = document.getElementById("digital-style-select");
+const monogramInput = document.getElementById("monogram-input");
+const frukostTimeInput = document.getElementById("frukost-time");
+const lunchTimeInput = document.getElementById("lunch-time");
+const fikaTimeInput = document.getElementById("fika-time");
+const seasonalToggle = document.getElementById("seasonal-toggle");
+const specialDateInput = document.getElementById("special-date-input");
+
+function buildFontSelect(selectEl) {
+  selectEl.innerHTML = "";
+  FONT_OPTIONS.forEach((f) => {
+    const opt = document.createElement("option");
+    opt.value = f.id;
+    opt.textContent = f.label;
+    opt.style.fontFamily = f.family;
+    opt.style.fontSize = "1.1rem";
+    selectEl.appendChild(opt);
+  });
+}
+buildFontSelect(nameFontSelect);
+buildFontSelect(clockFontSelect);
+
+function buildSimpleSelect(selectEl, options) {
+  selectEl.innerHTML = "";
+  options.forEach((o) => {
+    const opt = document.createElement("option");
+    opt.value = o.id;
+    opt.textContent = o.label;
+    selectEl.appendChild(opt);
+  });
+}
+buildSimpleSelect(clockStyleSelect, CLOCK_STYLES);
+buildSimpleSelect(digitalStyleSelect, DIGITAL_STYLES);
+
+function updateClockFontRowVisibility() {
+  clockFontRow.style.display = sameFontToggle.checked ? "none" : "flex";
+}
+sameFontToggle.addEventListener("change", updateClockFontRowVisibility);
+
+function openSettings() {
+  bgInput.value = settings.bg;
+  fgInput.value = settings.fg;
+  name1Input.value = settings.name1;
+  name2Input.value = settings.name2;
+  mealToggle.checked = settings.showMealTimer;
+  mealSoundToggle.checked = settings.mealSound;
+  nameFontSelect.value = settings.nameFont;
+  clockFontSelect.value = settings.clockFont;
+  sameFontToggle.checked = settings.sameFont;
+  displayModeSelect.value = settings.displayMode;
+  clockStyleSelect.value = settings.clockStyle;
+  digitalStyleSelect.value = settings.digitalStyle;
+  monogramInput.value = settings.monogram;
+  frukostTimeInput.value = settings.frukostTime;
+  lunchTimeInput.value = settings.lunchTime;
+  fikaTimeInput.value = settings.fikaTime;
+  seasonalToggle.checked = settings.seasonalEffects;
+  specialDateInput.value = settings.specialDate;
+  updateClockFontRowVisibility();
+  settingsOverlay.classList.remove("hidden");
+}
+document.getElementById("settings-btn").addEventListener("click", openSettings);
+
+document.getElementById("settings-close").addEventListener("click", () => {
+  settings = {
+    bg: bgInput.value,
+    fg: fgInput.value,
+    name1: name1Input.value,
+    name2: name2Input.value,
+    nameFont: nameFontSelect.value,
+    clockFont: clockFontSelect.value,
+    sameFont: sameFontToggle.checked,
+    displayMode: displayModeSelect.value,
+    clockStyle: clockStyleSelect.value,
+    digitalStyle: digitalStyleSelect.value,
+    monogram: monogramInput.value,
+    showMealTimer: mealToggle.checked,
+    mealSound: mealSoundToggle.checked,
+    frukostTime: frukostTimeInput.value || defaults.frukostTime,
+    lunchTime: lunchTimeInput.value || defaults.lunchTime,
+    fikaTime: fikaTimeInput.value || defaults.fikaTime,
+    seasonalEffects: seasonalToggle.checked,
+    specialDate: specialDateInput.value.trim()
+  };
+  saveSettings(settings);
+  applySettings();
+  settingsOverlay.classList.add("hidden");
+});
+
+applySettings();
 
 /* ============ Helskärm ============ */
 const fsBtn = document.getElementById("fullscreen-btn");
@@ -791,7 +1140,6 @@ fsBtn.addEventListener("click", async () => {
     } else {
       await document.exitFullscreen();
       fsBtn.textContent = "⛶";
-      
     }
   } catch (e) {
     console.log("Fullscreen misslyckades:", e);

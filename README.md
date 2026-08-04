@@ -1,100 +1,104 @@
 # Klockan – PWA
 
-En vanlig analog klocka som fyller hela skärmen, med:
+En klocka som fyller hela skärmen, med analog urtavla, digital klocka,
+namn, ett litet påskägg, och en rad valbara extra funktioner.
 
-- **Analog urtavla** (timmar/minuter/sekunder som visare), ritad i SVG och
-  uppdaterad varje sekund.
-- **Digital klocka** ovanför den analoga, i det pixliga "digitalur"-typsnittet
-  VT323 — för kollegor (eller andra) som hellre vill läsa siffror.
-- **Fritt val av färg** på förgrund (visare, siffror, text) och bakgrund,
-  via kugghjulet uppe till höger. Sparas i webbläsaren (`localStorage`) så
-  det ligger kvar nästa gång appen öppnas.
-- **Ett eller två namn** under klockan, med valfritt typsnitt (se nedan).
-  Fyll bara i namn 1 så visas det centrerat. Fyll i båda så visas de
-  bredvid varandra med ett "&" emellan.
-- **Valfri måltidsnedräkning** uppe i vänstra hörnet (se nedan).
-- **Påskägg**: tryck/tappa på klockan 5 gånger (inom ett par sekunder) så
-  dyker ett skärmtangentbord upp. Skriv "Stockholm" så visas ett slumpat
-  citat av antingen Astrid Lindgren eller Vilhelm Moberg.
-- **Helskärm** (knappen nere till vänster) och **wake lock** så skärmen
-  inte somnar, precis som i nedräkningsappen.
+## Grundfunktioner
+- **Analog urtavla** (SVG, uppdateras varje sekund) och **digital klocka**
+  — visa båda, eller bara den ena, via Inställningar → Visning.
+- **Fritt val av färg** på förgrund och bakgrund. Sparas i webbläsaren.
+- **Ett eller två namn** under klockan, med valfritt typsnitt (Standard,
+  Fraktur, Comic Sans, Filttusch, Bubblig, Retro-tv).
+- **Helskärm** (nere till vänster) och **wake lock** så skärmen inte somnar.
 
-## Typsnitt för namn och digitalklocka
-I inställningarna finns typsnitts-menyer med förhandsvisning direkt i
-listan, för både namnen och digitalklockan:
+## Urtavlestilar — svepbara
+Sväp direkt åt vänster/höger på den analoga klockan eller på digital-
+klockan för att bläddra mellan stilar (en liten prickrad under varje
+visar var i karusellen du är). Går även att välja i Inställningar.
 
-| Alternativ        | Typsnitt (Google Fonts)      |
-|--------------------|-------------------------------|
-| Standard           | Systemets vanliga typsnitt    |
-| Digitalur (VT323)  | VT323 (pixligt digitalur-typsnitt) |
-| Fraktur            | UnifrakturMaguntia (gotisk)   |
-| Comic Sans         | Comic Neue (öppen tvilling till Comic Sans MS — den riktiga Comic Sans finns inte gratis/licensierad för webben, men Comic Neue är i praktiken identisk i stilen) |
-| Filttusch          | Permanent Marker              |
-| Bubblig            | Pacifico                      |
-| Retro-tv           | Press Start 2P (8-bitars speltypsnitt) |
+**Analog:**
+- **Klassisk** — den ursprungliga stilen med siffror och minutstreck.
+- **Minimalistisk** — bara timstreck, inga siffror.
+- **Neon** — samma som klassisk men med ett mjukt glow i förgrundsfärgen.
+- **Lyxig** — elegant seriftypsnitt (Playfair Display) och ett litet eget
+  monogram under mitten (dina initialer, eller skriv in valfria 1–3
+  bokstäver i Inställningar). Det här är en helt egen, orginal design —
+  *inte* en kopia av något varumärkes logotyp.
 
-Kryssrutan **"Samma typsnitt för namn och digitalklocka"** styr om de två
-ska följas åt eller ställas in var för sig:
-- **Ikryssad**: bara en typsnittsmeny visas (för namnen), och digitalklockan
-  följer automatiskt samma val.
-- **Urkryssad**: en egen meny för digitalklockans typsnitt dyker upp, så du
-  kan välja olika typsnitt för namnen och klockan.
+**Digital:**
+- **Vanlig** — text i det typsnitt du valt för digitalklockan.
+- **Flip-klocka** — siffrorna visas som "split-flap"-kort, ungefär som en
+  gammaldags flygplats- eller tågstationstavla.
 
-Typsnitten laddas från Google Fonts, så plattan behöver vara uppkopplad
-mot internet första gången (eller då och då) för att hämta dem. Är den
-offline visas texten i webbläsarens vanliga typsnitt istället.
+Tryck fortfarande **5 gånger** (korta tryck, inte svep) på den analoga
+klockan för att öppna påskägget med skärmtangentbordet — se nedan.
 
-## Måltidsnedräkningen
-Går att slå på/av via kryssrutan i inställningarna ("Visa nedräkning till
-frukost/lunch/fika"). När den är på visas en liten ruta uppe i vänstra
-hörnet som följer ett dagligt schema:
+## Raster: frukost, lunch, fika
+I Inställningar → Raster ställer du in klockslag för Frukost, Lunch och
+Fika (standard 09:00 / 12:00 / 14:30). Nedräkningen räknar alltid till
+nästa kommande rast och byter automatiskt mål när en rast passeras —
+oavsett vilken ordning du råkar mata in tiderna i.
 
-| Tid           | Vad som visas                          |
-|---------------|-----------------------------------------|
-| 07:00 – 09:00 | Nedräkning till **Frukost** (09:00)     |
-| 09:00 – 12:00 | Nedräkning till **Lunch** (12:00)       |
-| 12:00 – 14:30 | Nedräkning till **Fika** (14:30)        |
-| 14:30 – 07:00 (nästa dygn) | Vilar, väntar till kl 07:00 |
+- **Visa nedräkning till nästa rast**: en liten ruta uppe i vänstra
+  hörnet med tid kvar. Helt valfri, av som standard.
+- **Spela ljud när en rast börjar**: en kort tvåtonssignal (genereras i
+  webbläsaren, ingen ljudfil behövs) spelas exakt när frukost, lunch
+  eller fika börjar. Fungerar oberoende av om rutan syns eller inte.
+  Webbläsare kräver interaktion innan ljud får spelas — det sker
+  automatiskt vid första tryck någonstans i appen.
 
-Klockan 14:30 nollställs den alltså och väntar tyst till nästa dags 07:00,
-då en ny nedräkning mot frukost börjar om.
+## Säsongseffekter
+Valfri (på som standard) diskret partikeleffekt ovanpå allt annat:
+- **Snö** i december och fram till och med 6 januari (trettondagen).
+- **Konfetti** på nyårsafton (31/12) och nyårsdagen (1/1).
+- **Extra fest-dag**: fyll i ett eget datum (format `MM-DD`, t.ex. `04-12`
+  för 12 april) i Inställningar för konfetti även den dagen — perfekt
+  för en födelsedag.
+
+## QR-kod: slumpmässigt visdomsord
+Knappen 🔳 nere till höger visar en QR-kod. Skannar man den med en annan
+enhet (telefon, surfplatta) öppnas `ordsprak.html` — en liten fristående
+sida med ett slumpat svenskt ordspråk ur en lista på ett femtiotal, och
+en knapp för att slumpa ett nytt (samma ordspråk visas aldrig två gånger
+i rad på samma enhet). Sidan behöver ligga i samma mapp som `index.html`
+på GitHub Pages för att länken ska fungera.
+
+## Påskägget
+Tryck (inte sväp) **5 gånger** på den analoga klockan inom ett par
+sekunder för att öppna ett skärmtangentbord. Skriv "Stockholm" så visas
+ett slumpat citat av Astrid Lindgren eller Vilhelm Moberg.
 
 ## Filer
 ```
-index.html         – appen
-manifest.json       – gör appen installerbar
-sw.js               – service worker, cache för offline
+index.html          – appen
+ordsprak.html        – sidan QR-koden länkar till
+manifest.json        – gör appen installerbar
+sw.js                – service worker, cache för offline
 icon-192.png / icon-512.png
 ```
 
-## Installation (samma flöde som tidigare)
-1. Ladda upp alla filer i repots rot på GitHub.
+## Installation
+1. Ladda upp alla filer (även `ordsprak.html`) i repots rot på GitHub.
 2. Aktivera GitHub Pages (Settings → Pages → Deploy from branch → main → root).
 3. Öppna länken i Chrome på Android-plattan → meny → "Lägg till på
    startskärmen" / "Installera app".
 4. Tryck "⛶" nere till vänster för extra helskärmsläge utöver PWA-läget.
 
-## Om citaten
-Jag har bara tagit med citat jag kunnat verifiera mot flera oberoende
-källor, och hållit dem korta. Vilhelm Mobergs kända *korta* citat visade
-sig vara ovanligt få att hitta belagda — det mesta som cirkulerar om
-honom är antingen längre stycken ur böckerna eller oklart varifrån de
-kommer — så listan lutar åt Astrid Lindgren (9 av 10). Vill du ha fler
-Moberg-citat, lägg gärna till egna i `quotes`-arrayen i `index.html`,
-men dubbelkolla källan så att attributionen stämmer.
+## Att känna till
+- **Google Fonts och QR-biblioteket** hämtas från internet. Fungerar
+  offline efter första besöket tack vare service workern, men om
+  plattan aldrig varit uppkopplad visas standard-typsnitt istället och
+  QR-knappen visar ett felmeddelande.
+- Den "lyxiga" urtavlan med monogram är en **egen, orginal design** —
+  inte en kopia av något bilmärkes eller varumärkes logotyp.
+- Citaten (påskägget) och ordspråken (QR-koden) är noga utvalda för att
+  vara verifierbara respektive fritt kulturarv utan enskild upphovsperson.
 
 ## Anpassa
 - **Citaten**: `quotes`-arrayen i `index.html`.
-- **Lösenordet** för påskägget (just nu "stockholm"): sök efter
-  `checkEasterEgg` i `index.html` och byt ut strängen `"stockholm"`.
-- **Antal tryck / tidsfönster** för påskägget: variablerna `TAP_TARGET`
-  (antal tryck, nu 5) och `TAP_RESET_MS` (hur lång paus som nollställer
-  räkningen, nu 2500 ms).
-- **Måltidstiderna**: funktionen `getMealState(now)` i `index.html` — byt
-  ut klockslagen (7/9/12/14:30) om du vill ha andra tider eller fler
-  pass.
-- **Standardfärger**: `defaults`-objektet i `index.html`.
-- **Typsnitten**: `FONT_OPTIONS`-arrayen i `index.html` — lägg till,
-  ta bort eller byt ut typsnitt (hämta då gärna motsvarande
-  Google Fonts-länk och lägg till i `<head>`). Samma lista används
-  både för namnen och digitalklockan.
+- **Ordspråken**: `sayings`-arrayen i `ordsprak.html`.
+- **Urtavlestilarna**: `CLOCK_STYLES` / `DIGITAL_STYLES` i `index.html`,
+  plus motsvarande CSS-klasser (`#clock.style-...`, `#digital-clock.style-...`).
+- **Rasttiderna** (standardvärden): `defaults.frukostTime` m.fl.
+- **Säsongseffekternas datum**: funktionen `getSeasonalEffect(now)`.
+- **Ljudsignalen**: funktionen `playChime()`.
