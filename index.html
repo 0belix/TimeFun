@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>Klockan</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=UnifrakturMaguntia&family=Comic+Neue:wght@400;700&family=Permanent+Marker&family=Pacifico&family=Press+Start+2P&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: var(--bg, #0f172a);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    user-select: none;
+    transition: background 0.3s ease;
+  }
+
+  #app {
+    height: 100vh;
+    height: 100dvh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2vmin;
+    padding: 3vmin;
+  }
+
+  #digital-clock {
+    font-family: 'VT323', 'Courier New', monospace;
+    color: var(--fg, #f8fafc);
+    font-size: clamp(2.2rem, 9vmin, 5.5rem);
+    letter-spacing: 0.06em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #clock-wrap {
+    width: min(64vmin, 84vw);
+    height: min(64vmin, 84vw);
+    flex-shrink: 0;
+  }
+  #clock { width: 100%; height: 100%; display: block; }
+  #clock .tick { stroke: var(--fg, #f8fafc); }
+  #clock .tick-hour { stroke-width: 2.4; }
+  #clock .tick-min { stroke-width: 0.8; opacity: 0.55; }
+  #clock .number { fill: var(--fg, #f8fafc); font-weight: 600; }
+  #clock .rim { stroke: var(--fg, #f8fafc); fill: none; opacity: 0.35; }
+  #clock .hand { stroke: var(--fg, #f8fafc); stroke-linecap: round; }
+  #clock .hub { fill: var(--fg, #f8fafc); }
+
+  #names {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2vmin;
+    flex-wrap: wrap;
+    max-width: 92vw;
+    color: var(--fg, #f8fafc);
+    font-weight: 700;
+    font-size: clamp(1.4rem, 5vmin, 3rem);
+    min-height: 1.4em;
+  }
+  #names .sep { opacity: 0.6; font-weight: 400; }
+
+  /* ---------- Inställningar ---------- */
+  #settings-btn {
+    position: fixed;
+    top: 1.6vmin;
+    right: 1.6vmin;
+    width: clamp(40px, 6vmin, 56px);
+    height: clamp(40px, 6vmin, 56px);
+    border-radius: 50%;
+    border: 1px solid rgba(128,128,128,0.4);
+    background: rgba(128,128,128,0.15);
+    color: var(--fg, #f8fafc);
+    font-size: clamp(1.1rem, 3vmin, 1.6rem);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #fullscreen-btn {
+    position: fixed;
+    bottom: 1.6vmin;
+    left: 1.6vmin;
+    width: clamp(40px, 6vmin, 56px);
+    height: clamp(40px, 6vmin, 56px);
+    border-radius: 50%;
+    border: 1px solid rgba(128,128,128,0.4);
+    background: rgba(128,128,128,0.15);
+    color: var(--fg, #f8fafc);
+    font-size: clamp(1rem, 2.6vmin, 1.4rem);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---------- Måltidsnedräkning (valfri, övre vänstra hörnet) ---------- */
+  #meal-timer {
+    position: fixed;
+    top: 1.6vmin;
+    left: 1.6vmin;
+    background: rgba(128,128,128,0.15);
+    border: 1px solid rgba(128,128,128,0.35);
+    color: var(--fg, #f8fafc);
+    border-radius: 14px;
+    padding: 1vmin 2vmin;
+    text-align: left;
+    line-height: 1.3;
+  }
+  #meal-timer.hidden { display: none; }
+  #meal-label {
+    font-size: clamp(0.75rem, 1.8vmin, 1rem);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+  }
+  #meal-countdown {
+    font-size: clamp(1.1rem, 3vmin, 1.6rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  .overlay.hidden { display: none; }
+
+  #settings-panel {
+    background: #1e293b;
+    color: #f8fafc;
+    border-radius: 18px;
+    padding: 4vmin;
+    width: min(90vw, 420px);
+    display: flex;
+    flex-direction: column;
+    gap: 2.2vmin;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  }
+  #settings-panel h2 { margin: 0 0 0.4em; font-size: 1.3rem; }
+  #settings-panel label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    font-size: 0.95rem;
+    color: #cbd5e1;
+  }
+  #settings-panel input[type="text"] {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #f8fafc;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 1rem;
+  }
+  #settings-panel select {
+    background: #111827;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #f8fafc;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 1.05rem;
+  }
+  #settings-panel select option {
+    background: #111827;
+  }
+  #settings-panel input[type="color"] {
+    width: 100%;
+    height: 42px;
+    border: none;
+    border-radius: 10px;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  .color-row { display: flex; gap: 2vmin; }
+  .color-row label { flex: 1; }
+  .checkbox-row {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 1em !important;
+  }
+  .checkbox-row input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #f97316;
+  }
+  #settings-panel button {
+    margin-top: 0.6em;
+    background: #f97316;
+    color: #111827;
+    border: none;
+    font-weight: 700;
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  /* ---------- Tangentbord (påskägg) ---------- */
+  #keyboard-panel {
+    background: #1e293b;
+    color: #f8fafc;
+    border-radius: 18px;
+    padding: 3vmin;
+    width: min(94vw, 640px);
+    display: flex;
+    flex-direction: column;
+    gap: 1.6vmin;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  }
+  #kb-display {
+    background: rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 1.4vmin;
+    min-height: 1.6em;
+    font-size: clamp(1.1rem, 3vmin, 1.6rem);
+    text-align: center;
+    letter-spacing: 0.08em;
+  }
+  .kb-row {
+    display: flex;
+    justify-content: center;
+    gap: 0.6vmin;
+    flex-wrap: wrap;
+  }
+  .kb-key {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #f8fafc;
+    border-radius: 8px;
+    padding: 1.6vmin 0;
+    flex: 1 1 0;
+    min-width: 24px;
+    max-width: 60px;
+    font-size: clamp(0.9rem, 2.4vmin, 1.2rem);
+    cursor: pointer;
+  }
+  .kb-key:active { background: rgba(255,255,255,0.25); }
+  .kb-key.wide { flex: 3 1 0; max-width: none; }
+  .kb-key.close { background: rgba(239,68,68,0.25); }
+
+  /* ---------- Citat-overlay ---------- */
+  #quote-panel {
+    background: #1e293b;
+    color: #f8fafc;
+    border-radius: 18px;
+    padding: 5vmin 4vmin;
+    width: min(90vw, 560px);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6vmin;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  }
+  #quote-text {
+    font-size: clamp(1.2rem, 3.6vmin, 1.9rem);
+    font-style: italic;
+    line-height: 1.4;
+  }
+  #quote-author {
+    font-size: clamp(0.9rem, 2.2vmin, 1.1rem);
+    color: #cbd5e1;
+  }
+  #quote-panel button {
+    align-self: center;
+    margin-top: 0.6em;
+    background: #f97316;
+    color: #111827;
+    border: none;
+    font-weight: 700;
+    padding: 10px 24px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  #wake-warning {
+    position: fixed;
+    bottom: 1.2vmin;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: clamp(0.7rem, 1.5vmin, 0.9rem);
+    color: var(--fg, #f8fafc);
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="digital-clock"></div>
+  <div id="clock-wrap">
+    <svg id="clock" viewBox="0 0 200 200"></svg>
+  </div>
+  <div id="names">
+    <span id="name1"></span>
+    <span id="sep" class="sep" style="display:none;">&amp;</span>
+    <span id="name2"></span>
+  </div>
+</div>
+
+<button id="fullscreen-btn" title="Helskärm">⛶</button>
+<button id="settings-btn" title="Inställningar">⚙️</button>
+<div id="wake-warning"></div>
+
+<div id="meal-timer" class="hidden">
+  <div id="meal-label"></div>
+  <div id="meal-countdown"></div>
+</div>
+
+<div class="overlay hidden" id="settings-overlay">
+  <div id="settings-panel">
+    <h2>Inställningar</h2>
+    <div class="color-row">
+      <label>Bakgrundsfärg
+        <input type="color" id="bg-color" />
+      </label>
+      <label>Förgrundsfärg
+        <input type="color" id="fg-color" />
+      </label>
+    </div>
+    <label>Namn 1
+      <input type="text" id="name1-input" maxlength="24" placeholder="t.ex. Anna" />
+    </label>
+    <label>Namn 2 (valfritt)
+      <input type="text" id="name2-input" maxlength="24" placeholder="t.ex. Erik" />
+    </label>
+    <label>Typsnitt för namnen
+      <select id="name-font-select"></select>
+    </label>
+    <label class="checkbox-row">
+      <input type="checkbox" id="same-font-toggle" />
+      Samma typsnitt för namn och digitalklocka
+    </label>
+    <label id="clock-font-row">Typsnitt för digitalklockan
+      <select id="clock-font-select"></select>
+    </label>
+    <label class="checkbox-row">
+      <input type="checkbox" id="meal-toggle" />
+      Visa nedräkning till frukost/lunch/fika
+    </label>
+    <button id="settings-close">Klar</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="keyboard-overlay">
+  <div id="keyboard-panel">
+    <div id="kb-display"></div>
+    <div class="kb-row" id="kb-row-1"></div>
+    <div class="kb-row" id="kb-row-2"></div>
+    <div class="kb-row" id="kb-row-3"></div>
+    <div class="kb-row">
+      <button class="kb-key wide" id="kb-space">mellanslag</button>
+      <button class="kb-key" id="kb-back">⌫</button>
+      <button class="kb-key close" id="kb-close">Stäng</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="quote-overlay">
+  <div id="quote-panel">
+    <div id="quote-text"></div>
+    <div id="quote-author"></div>
+    <button id="quote-close">Stäng</button>
+  </div>
+</div>
+
+<script>
+/* ============ Citat (påskägg vid "Stockholm") ============
+   Kort urval, verifierade mot flera oberoende källor. Vilhelm Mobergs
+   välkända KORTA citat är få (det mesta som cirkulerar är antingen
+   längre stycken eller osäkert belagt), så listan lutar mot Astrid
+   Lindgren. Byt/utöka gärna i arrayen nedan om du hittar fler du
+   själv verifierat. */
+const quotes = [
+  { text: "Man bör leva sitt liv så man blir vän med döden.", author: "Astrid Lindgren" },
+  { text: "Ge barnen kärlek, mera kärlek och ännu mera kärlek.", author: "Astrid Lindgren" },
+  { text: "Det har jag aldrig provat förut, så det klarar jag säkert.", author: "Astrid Lindgren, Pippi Långstrump" },
+  { text: "Man kan inte piska in något i barn, men man kan smeka fram mycket.", author: "Astrid Lindgren" },
+  { text: "Den som är väldigt stark måste också vara väldigt snäll.", author: "Astrid Lindgren, Pippi Långstrump" },
+  { text: "Och så ska man ju ha några stunder att bara sitta och glo också!", author: "Astrid Lindgren" },
+  { text: "Barn måste få vara barn och de måste få vara fria.", author: "Astrid Lindgren" },
+  { text: "Sandaler minsann! Fint som kattskit i vällingen!", author: "Astrid Lindgren, Madicken" },
+  { text: "Herr Blomkvist är en skicklig kemist, kan jag förstå?", author: "Astrid Lindgren, Mästerdetektiven Blomkvist" },
+  { text: "Ta vara på ditt liv, för nu är det din stund på jorden.", author: "Vilhelm Moberg, Din stund på jorden" }
+];
+
+/* ============ Inställningar (sparas lokalt i webbläsaren) ============ */
+const FONT_OPTIONS = [
+  { id: "standard", label: "Standard", family: "'Segoe UI', system-ui, -apple-system, Roboto, sans-serif" },
+  { id: "digital", label: "Digitalur (VT323)", family: "'VT323', 'Courier New', monospace" },
+  { id: "fraktur", label: "Fraktur", family: "'UnifrakturMaguntia', cursive" },
+  { id: "comic", label: "Comic Sans", family: "'Comic Neue', 'Comic Sans MS', cursive" },
+  { id: "marker", label: "Filttusch", family: "'Permanent Marker', cursive" },
+  { id: "bubbly", label: "Bubblig", family: "'Pacifico', cursive" },
+  { id: "retro", label: "Retro-tv", family: "'Press Start 2P', monospace" }
+];
+
+const defaults = {
+  bg: "#0f172a",
+  fg: "#f8fafc",
+  name1: "",
+  name2: "",
+  showMealTimer: false,
+  nameFont: "standard",
+  clockFont: "digital",
+  sameFont: false
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem("klocka-settings");
+    if (!raw) return { ...defaults };
+    return { ...defaults, ...JSON.parse(raw) };
+  } catch {
+    return { ...defaults };
+  }
+}
+
+function saveSettings(s) {
+  try {
+    localStorage.setItem("klocka-settings", JSON.stringify(s));
+  } catch (e) {
+    console.log("Kunde inte spara inställningar:", e);
+  }
+}
+
+let settings = loadSettings();
+
+function applySettings() {
+  document.documentElement.style.setProperty("--bg", settings.bg);
+  document.documentElement.style.setProperty("--fg", settings.fg);
+
+  const name1El = document.getElementById("name1");
+  const name2El = document.getElementById("name2");
+  const sepEl = document.getElementById("sep");
+
+  const n1 = settings.name1.trim();
+  const n2 = settings.name2.trim();
+
+  if (n1 && n2) {
+    name1El.textContent = n1;
+    name2El.textContent = n2;
+    sepEl.style.display = "inline";
+    document.getElementById("names").style.justifyContent = "center";
+  } else if (n1 || n2) {
+    name1El.textContent = n1 || n2;
+    name2El.textContent = "";
+    sepEl.style.display = "none";
+    document.getElementById("names").style.justifyContent = "center";
+  } else {
+    name1El.textContent = "";
+    name2El.textContent = "";
+    sepEl.style.display = "none";
+  }
+
+  document.getElementById("meal-timer").classList.toggle("hidden", !settings.showMealTimer);
+
+  const nameFontDef = FONT_OPTIONS.find((f) => f.id === settings.nameFont) || FONT_OPTIONS[0];
+  document.getElementById("names").style.fontFamily = nameFontDef.family;
+
+  const clockFontId = settings.sameFont ? settings.nameFont : settings.clockFont;
+  const clockFontDef = FONT_OPTIONS.find((f) => f.id === clockFontId) || FONT_OPTIONS[0];
+  document.getElementById("digital-clock").style.fontFamily = clockFontDef.family;
+}
+
+applySettings();
+
+/* ============ Rita analog klocka ============ */
+const svgNS = "http://www.w3.org/2000/svg";
+const clockSvg = document.getElementById("clock");
+const CENTER = 100;
+const RADIUS = 92;
+
+function el(tag, attrs) {
+  const e = document.createElementNS(svgNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+function polar(cx, cy, r, angleDeg) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function buildClockFace() {
+  clockSvg.innerHTML = "";
+  clockSvg.appendChild(el("circle", { class: "rim", cx: CENTER, cy: CENTER, r: RADIUS, "stroke-width": 1.5 }));
+
+  // 60 minutmarkeringar
+  for (let i = 0; i < 60; i++) {
+    const angle = i * 6;
+    const isHour = i % 5 === 0;
+    const outer = polar(CENTER, CENTER, RADIUS - 2, angle);
+    const inner = polar(CENTER, CENTER, RADIUS - (isHour ? 12 : 6), angle);
+    clockSvg.appendChild(
+      el("line", {
+        class: "tick " + (isHour ? "tick-hour" : "tick-min"),
+        x1: outer.x, y1: outer.y, x2: inner.x, y2: inner.y
+      })
+    );
+  }
+
+  // Siffror 1-12
+  for (let n = 1; n <= 12; n++) {
+    const angle = n * 30;
+    const pos = polar(CENTER, CENTER, RADIUS - 22, angle);
+    const text = el("text", {
+      class: "number",
+      x: pos.x, y: pos.y + 5,
+      "text-anchor": "middle",
+      "font-size": "14"
+    });
+    text.textContent = n;
+    clockSvg.appendChild(text);
+  }
+
+  // Visare
+  clockSvg.appendChild(el("line", { id: "hand-hour", class: "hand", x1: CENTER, y1: CENTER, x2: CENTER, y2: CENTER - 46, "stroke-width": 5 }));
+  clockSvg.appendChild(el("line", { id: "hand-minute", class: "hand", x1: CENTER, y1: CENTER, x2: CENTER, y2: CENTER - 68, "stroke-width": 3.5 }));
+  clockSvg.appendChild(el("line", { id: "hand-second", class: "hand", x1: CENTER, y1: CENTER, x2: CENTER, y2: CENTER - 74, "stroke-width": 1.4, opacity: 0.85 }));
+  clockSvg.appendChild(el("circle", { class: "hub", cx: CENTER, cy: CENTER, r: 4 }));
+}
+
+buildClockFace();
+
+function updateClockHands() {
+  const now = new Date();
+  const h = now.getHours() % 12;
+  const m = now.getMinutes();
+  const s = now.getSeconds();
+
+  const hourAngle = h * 30 + m * 0.5;
+  const minuteAngle = m * 6 + s * 0.1;
+  const secondAngle = s * 6;
+
+  document.getElementById("hand-hour").setAttribute("transform", `rotate(${hourAngle} ${CENTER} ${CENTER})`);
+  document.getElementById("hand-minute").setAttribute("transform", `rotate(${minuteAngle} ${CENTER} ${CENTER})`);
+  document.getElementById("hand-second").setAttribute("transform", `rotate(${secondAngle} ${CENTER} ${CENTER})`);
+
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  document.getElementById("digital-clock").textContent = `${hh}:${mm}:${ss}`;
+}
+
+updateClockHands();
+setInterval(updateClockHands, 1000);
+
+/* ============ Måltidsnedräkning ============
+   07:00–09:00 -> räknar ner till Frukost (09:00)
+   09:00–12:00 -> räknar ner till Lunch   (12:00)
+   12:00–14:30 -> räknar ner till Fika    (14:30)
+   14:30–07:00 (nästa dygn) -> vilar, väntar till kl 07:00 då cykeln
+   börjar om med en ny nedräkning till Frukost. */
+function atTime(base, h, m) {
+  const d = new Date(base);
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function getMealState(now) {
+  const t7 = atTime(now, 7, 0);
+  const t9 = atTime(now, 9, 0);
+  const t12 = atTime(now, 12, 0);
+  const t1430 = atTime(now, 14, 30);
+
+  if (now >= t7 && now < t9) {
+    return { active: true, label: "Frukost", target: t9 };
+  }
+  if (now >= t9 && now < t12) {
+    return { active: true, label: "Lunch", target: t12 };
+  }
+  if (now >= t12 && now < t1430) {
+    return { active: true, label: "Fika", target: t1430 };
+  }
+  // Vilofas: innan 07:00 idag, eller efter 14:30 -> väntar till 07:00
+  // (idag om vi inte hunnit dit än, annars imorgon).
+  let resumeAt = t7;
+  if (now >= t1430) {
+    resumeAt = atTime(now, 7, 0);
+    resumeAt.setDate(resumeAt.getDate() + 1);
+  }
+  return { active: false, resumeAt };
+}
+
+function formatHMS(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+}
+
+function updateMealTimer() {
+  if (!settings.showMealTimer) return;
+  const now = new Date();
+  const state = getMealState(now);
+  const labelEl = document.getElementById("meal-label");
+  const countEl = document.getElementById("meal-countdown");
+
+  if (state.active) {
+    labelEl.textContent = "Till " + state.label;
+    countEl.textContent = formatHMS(state.target - now);
+  } else {
+    labelEl.textContent = "Nästa nedräkning";
+    countEl.textContent = "kl 07:00";
+  }
+}
+
+updateMealTimer();
+setInterval(updateMealTimer, 1000);
+
+/* ============ Inställningspanel ============ */
+const settingsOverlay = document.getElementById("settings-overlay");
+const bgInput = document.getElementById("bg-color");
+const fgInput = document.getElementById("fg-color");
+const name1Input = document.getElementById("name1-input");
+const name2Input = document.getElementById("name2-input");
+const mealToggle = document.getElementById("meal-toggle");
+const nameFontSelect = document.getElementById("name-font-select");
+const clockFontSelect = document.getElementById("clock-font-select");
+const sameFontToggle = document.getElementById("same-font-toggle");
+const clockFontRow = document.getElementById("clock-font-row");
+
+function buildFontSelect(selectEl) {
+  selectEl.innerHTML = "";
+  FONT_OPTIONS.forEach((f) => {
+    const opt = document.createElement("option");
+    opt.value = f.id;
+    opt.textContent = f.label;
+    opt.style.fontFamily = f.family;
+    opt.style.fontSize = "1.1rem";
+    selectEl.appendChild(opt);
+  });
+}
+buildFontSelect(nameFontSelect);
+buildFontSelect(clockFontSelect);
+
+function updateClockFontRowVisibility() {
+  clockFontRow.style.display = sameFontToggle.checked ? "none" : "flex";
+}
+sameFontToggle.addEventListener("change", updateClockFontRowVisibility);
+
+function openSettings() {
+  bgInput.value = settings.bg;
+  fgInput.value = settings.fg;
+  name1Input.value = settings.name1;
+  name2Input.value = settings.name2;
+  mealToggle.checked = settings.showMealTimer;
+  nameFontSelect.value = settings.nameFont;
+  clockFontSelect.value = settings.clockFont;
+  sameFontToggle.checked = settings.sameFont;
+  updateClockFontRowVisibility();
+  settingsOverlay.classList.remove("hidden");
+}
+
+document.getElementById("settings-btn").addEventListener("click", openSettings);
+
+document.getElementById("settings-close").addEventListener("click", () => {
+  settings = {
+    bg: bgInput.value,
+    fg: fgInput.value,
+    name1: name1Input.value,
+    name2: name2Input.value,
+    showMealTimer: mealToggle.checked,
+    nameFont: nameFontSelect.value,
+    clockFont: clockFontSelect.value,
+    sameFont: sameFontToggle.checked
+  };
+  saveSettings(settings);
+  applySettings();
+  settingsOverlay.classList.add("hidden");
+});
+
+/* ============ Påskägg: 5 tryck på klockan -> tangentbord ============ */
+let tapCount = 0;
+let lastTapTime = 0;
+const TAP_RESET_MS = 2500;
+const TAP_TARGET = 5;
+
+document.getElementById("clock-wrap").addEventListener("click", () => {
+  const now = Date.now();
+  if (now - lastTapTime > TAP_RESET_MS) tapCount = 0;
+  lastTapTime = now;
+  tapCount++;
+  if (tapCount >= TAP_TARGET) {
+    tapCount = 0;
+    openKeyboard();
+  }
+});
+
+/* ============ Skärmtangentbord ============ */
+const keyboardOverlay = document.getElementById("keyboard-overlay");
+const kbDisplay = document.getElementById("kb-display");
+let kbBuffer = "";
+
+const KB_ROWS = [
+  "QWERTYUIOPÅ",
+  "ASDFGHJKLÖÄ",
+  "ZXCVBNM"
+];
+
+function buildKeyboard() {
+  KB_ROWS.forEach((row, i) => {
+    const rowEl = document.getElementById("kb-row-" + (i + 1));
+    rowEl.innerHTML = "";
+    row.split("").forEach((ch) => {
+      const btn = document.createElement("button");
+      btn.className = "kb-key";
+      btn.textContent = ch;
+      btn.addEventListener("click", () => handleKey(ch));
+      rowEl.appendChild(btn);
+    });
+  });
+}
+buildKeyboard();
+
+function handleKey(ch) {
+  kbBuffer = (kbBuffer + ch).slice(-20);
+  kbDisplay.textContent = kbBuffer;
+  checkEasterEgg();
+}
+
+document.getElementById("kb-space").addEventListener("click", () => handleKey(" "));
+document.getElementById("kb-back").addEventListener("click", () => {
+  kbBuffer = kbBuffer.slice(0, -1);
+  kbDisplay.textContent = kbBuffer;
+});
+document.getElementById("kb-close").addEventListener("click", closeKeyboard);
+
+function openKeyboard() {
+  kbBuffer = "";
+  kbDisplay.textContent = "";
+  keyboardOverlay.classList.remove("hidden");
+}
+function closeKeyboard() {
+  keyboardOverlay.classList.add("hidden");
+}
+
+function checkEasterEgg() {
+  if (kbBuffer.toLowerCase().includes("stockholm")) {
+    kbBuffer = "";
+    kbDisplay.textContent = "";
+    closeKeyboard();
+    showRandomQuote();
+  }
+}
+
+/* ============ Citat-overlay ============ */
+const quoteOverlay = document.getElementById("quote-overlay");
+function showRandomQuote() {
+  const q = quotes[Math.floor(Math.random() * quotes.length)];
+  document.getElementById("quote-text").textContent = "\u201D" + q.text + "\u201D";
+  document.getElementById("quote-author").textContent = "— " + q.author;
+  quoteOverlay.classList.remove("hidden");
+}
+document.getElementById("quote-close").addEventListener("click", () => {
+  quoteOverlay.classList.add("hidden");
+});
+
+/* ============ Helskärm ============ */
+const fsBtn = document.getElementById("fullscreen-btn");
+fsBtn.addEventListener("click", async () => {
+  try {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+      fsBtn.textContent = "⤢";
+    } else {
+      await document.exitFullscreen();
+      fsBtn.textContent = "⛶";
+      
+    }
+  } catch (e) {
+    console.log("Fullscreen misslyckades:", e);
+  }
+});
+
+/* ============ Håll skärmen vaken ============ */
+let wakeLock = null;
+async function requestWakeLock() {
+  try {
+    if ("wakeLock" in navigator) {
+      wakeLock = await navigator.wakeLock.request("screen");
+      document.getElementById("wake-warning").textContent = "";
+    } else {
+      document.getElementById("wake-warning").textContent =
+        "Skärmlås kan inte förhindras automatiskt i denna webbläsare.";
+    }
+  } catch (err) {
+    document.getElementById("wake-warning").textContent =
+      "Kunde inte hålla skärmen vaken: " + err.message;
+  }
+}
+requestWakeLock();
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") requestWakeLock();
+});
+
+/* ============ Registrera service worker ============ */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch((e) => console.log("SW-fel:", e));
+  });
+}
+</script>
+</body>
+</html>
