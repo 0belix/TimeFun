@@ -1,136 +1,353 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" data-theme="funkis">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Ett visdomsord</title>
+<meta name="description" content="Ett slumpat visdomsord från Klockan." />
+<meta name="theme-color" content="#2E181B" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Poiret+One&family=Oswald:wght@300;400;500&display=swap" rel="stylesheet" />
+
 <style>
-  * { box-sizing: border-box; }
+  /* ==========================================================================
+     Paletterna är desamma som i Klockan.html, men bara de tokens den här sidan
+     faktiskt använder. Ändras en färg i klockan måste den ändras här också —
+     filerna delar ingen stilmall.
+     ========================================================================== */
+  :root {
+    --quote-fade-duration: 420ms;
+    --content-max-width: 34rem;
+    --radius-pill: 999px;
+  }
+
+  :root[data-theme="funkis"] {
+    --background-color: #2E181B;
+    --foreground-color: #EFE2CE;
+    --accent-color: #C9A227;
+    --muted-color: #A98A5B;
+    --interface-font: 'Jost', system-ui, sans-serif;
+    --quote-letter-spacing: 0.01em;
+  }
+  :root[data-theme="deco"] {
+    --background-color: #0B0B0D;
+    --foreground-color: #EFE6D2;
+    --accent-color: #D4AF6A;
+    --muted-color: #8C7745;
+    --interface-font: 'Poiret One', 'Jost', sans-serif;
+    --quote-letter-spacing: 0.05em;
+  }
+  :root[data-theme="station"] {
+    --background-color: #F2F0EB;
+    --foreground-color: #16181A;
+    --accent-color: #D3312A;
+    --muted-color: #6B7075;
+    --interface-font: 'Jost', system-ui, sans-serif;
+    --quote-letter-spacing: 0;
+  }
+  :root[data-theme="bakelit"] {
+    --background-color: #1A1310;
+    --foreground-color: #FFB454;
+    --accent-color: #FF8A2B;
+    --muted-color: #A9743A;
+    --interface-font: 'Oswald', system-ui, sans-serif;
+    --quote-letter-spacing: 0.03em;
+  }
+  :root[data-theme="neon"] {
+    --background-color: #08070E;
+    --foreground-color: #39E5FF;
+    --accent-color: #FF3DCB;
+    --muted-color: #4E8FA3;
+    --interface-font: 'Jost', system-ui, sans-serif;
+    --quote-letter-spacing: 0.04em;
+  }
+  :root[data-theme="minimal"] {
+    --background-color: #101112;
+    --foreground-color: #E8E8E6;
+    --accent-color: #E8E8E6;
+    --muted-color: #7C7F83;
+    --interface-font: 'Jost', system-ui, sans-serif;
+    --quote-letter-spacing: 0.06em;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
   html, body {
     margin: 0;
+    padding: 0;
     min-height: 100%;
-    background: radial-gradient(circle at 50% 20%, #1e293b, #0f172a 70%);
-    color: #f8fafc;
-    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6vmin 5vw;
+    background: var(--background-color);
+    color: var(--foreground-color);
+    font-family: var(--interface-font);
   }
-  #card {
-    max-width: 560px;
-    text-align: center;
+
+  #page {
+    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4vmin;
+    justify-content: center;
+    gap: 2.4rem;
+    /* Marginalerna respekterar hål och rundade hörn på telefonskärmar */
+    padding: max(2rem, env(safe-area-inset-top)) 1.6rem max(2rem, env(safe-area-inset-bottom));
+    text-align: center;
   }
-  #quote {
-    font-size: clamp(1.4rem, 5vmin, 2.2rem);
-    font-weight: 700;
-    line-height: 1.4;
+
+  /* Liten urtavla som knyter sidan till klockan man just skannat */
+  #dial-mark { width: 3rem; height: 3rem; flex-shrink: 0; }
+  #dial-mark .rim, #dial-mark .tick { stroke: var(--accent-color); fill: none; }
+  #dial-mark .hand { stroke: var(--foreground-color); stroke-linecap: round; }
+  #dial-mark .hub { fill: var(--accent-color); }
+
+  #quote-figure {
+    margin: 0;
+    max-width: var(--content-max-width);
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+    animation: quote-appear var(--quote-fade-duration) ease-out both;
   }
-  #quote::before { content: "\201D"; }
-  #quote::after { content: "\201D"; }
-  button {
-    background: #f97316;
-    color: #111827;
-    border: none;
-    font-weight: 700;
-    padding: 12px 26px;
-    border-radius: 999px;
+  @keyframes quote-appear {
+    from { opacity: 0; transform: translateY(0.7rem); }
+    to { opacity: 1; transform: none; }
+  }
+
+  #quote-text {
+    margin: 0;
+    font-size: clamp(1.35rem, 5.6vw, 2.1rem);
+    font-style: italic;
+    line-height: 1.45;
+    letter-spacing: var(--quote-letter-spacing);
+    text-wrap: balance;
+  }
+
+  #quote-author {
+    font-size: clamp(0.95rem, 3.4vw, 1.15rem);
+    color: var(--muted-color);
+    font-style: normal;
+  }
+  /* Tunn linje ovanför upphovspersonen, samma gest som mässingsdetaljerna */
+  #quote-author::before {
+    content: "";
+    display: block;
+    width: 2.5rem;
+    height: 1px;
+    margin: 0 auto 1.1rem;
+    background: var(--accent-color);
+    opacity: 0.6;
+  }
+
+  #next-quote-button {
+    background: none;
+    border: 1px solid var(--accent-color);
+    color: var(--foreground-color);
+    font-family: var(--interface-font);
     font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    /* Minst 44 px höjd — annars blir knappen svår att träffa med tummen */
+    padding: 0.95rem 1.9rem;
+    min-height: 44px;
+    border-radius: var(--radius-pill);
     cursor: pointer;
   }
-  #hint { font-size: 0.85rem; color: #94a3b8; }
+  #next-quote-button:active { background: var(--accent-color); color: var(--background-color); }
+  #next-quote-button:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #quote-figure { animation: none; }
+  }
 </style>
 </head>
 <body>
-<div id="card">
-  <div id="quote"></div>
-  <button id="new-btn">Nytt ord</button>
-  <div id="hint">Svenska ordspråk och talesätt</div>
-</div>
+<noscript>
+  <p style="padding:2rem;text-align:center;">Sidan kräver JavaScript för att slumpa fram ett visdomsord.</p>
+</noscript>
 
-<script>
-/* Traditionella svenska ordspråk (folkligt kulturarv, ingen enskild
-   upphovsperson) — en förhållandevis stor lista så att samma inte dyker
-   upp direkt igen. */
-const sayings = [
-  "Alla goda ting är tre.",
-  "Alla vägar bär till Rom.",
-  "Allt är inte guld som glimmar.",
-  "Anfall är bästa försvar.",
-  "Av skadan blir man vis.",
-  "Bättre en fågel i handen än tio i skogen.",
-  "Bättre fly än illa fäkta.",
-  "Bättre sent än aldrig.",
-  "Borta bra men hemma bäst.",
-  "Bra karl reder sig själv.",
-  "Bränt barn skyr elden.",
-  "Det är ingen ko på isen.",
-  "Det som göms i snö kommer fram i tö.",
-  "Den som gapar efter mycket mister ofta hela stycket.",
-  "Den som väntar på något gott väntar aldrig för länge.",
-  "Ett gott skratt förlänger livet.",
-  "Övning ger färdighet.",
-  "Ingen rök utan eld.",
-  "Man ska inte döma hunden efter håren.",
-  "Man ska inte gräva en grop åt andra.",
-  "Man ska smida medan järnet är varmt.",
-  "Man vet vad man har, inte vad man får.",
-  "Morgonstund har guld i mun.",
-  "När katten är borta dansar råttorna på bordet.",
-  "När man talar om trollen står de i farstun.",
-  "Nöden är uppfinningarnas moder.",
-  "Skomakare, bliv vid din läst.",
-  "Skrattar bäst som skrattar sist.",
-  "Tala är silver, tiga är guld.",
-  "Tiden läker alla sår.",
-  "Var dag har nog av sin egen plåga.",
-  "Vad man sår får man skörda.",
-  "Alla katter är grå i mörkret.",
-  "Bättre att förekomma än förekommas.",
-  "Bättre att stämma i bäcken än i ån.",
-  "Den som spar han har.",
-  "Först till kvarn får först mala.",
-  "Man ska ta seden dit man kommer.",
-  "Många bäckar små gör en stor å.",
-  "Sent skall syndaren vakna.",
-  "Skam den som ger sig.",
-  "Var sak har sin tid.",
-  "Allt har en ände, utom korven som har två.",
-  "Arga katter får rivet skinn.",
-  "Av barn och dårar får man höra sanningen.",
-  "Att skiljas är att dö en smula.",
-  "Bit inte den hand som föder dig.",
-  "Blod är tjockare än vatten.",
-  "Bättre brödlös än rådlös.",
-  "Bättre ensam än i dåligt sällskap.",
-  "Bättre ett ärligt nej än ett falskt ja."
-];
+<main id="page">
+  <svg id="dial-mark" viewBox="0 0 100 100" role="img" aria-label="Klockan">
+    <circle class="rim" cx="50" cy="50" r="44" stroke-width="3" />
+    <line class="tick" x1="50" y1="10" x2="50" y2="20" stroke-width="4" />
+    <line class="tick" x1="90" y1="50" x2="80" y2="50" stroke-width="4" />
+    <line class="tick" x1="50" y1="90" x2="50" y2="80" stroke-width="4" />
+    <line class="tick" x1="10" y1="50" x2="20" y2="50" stroke-width="4" />
+    <line class="hand" x1="50" y1="50" x2="35" y2="38" stroke-width="5" />
+    <line class="hand" x1="50" y1="50" x2="72" y2="40" stroke-width="3.5" />
+    <circle class="hub" cx="50" cy="50" r="4" />
+  </svg>
 
-let lastIndex = -1;
-try {
-  const saved = sessionStorage.getItem("ordsprak-last");
-  if (saved !== null) lastIndex = Number(saved);
-} catch (e) { /* sessionStorage kan vara otillgängligt, ignorera */ }
+  <figure id="quote-figure">
+    <blockquote id="quote-text"></blockquote>
+    <figcaption id="quote-author"></figcaption>
+  </figure>
 
-function pickSaying() {
-  let idx;
-  do {
-    idx = Math.floor(Math.random() * sayings.length);
-  } while (idx === lastIndex && sayings.length > 1);
-  lastIndex = idx;
-  try { sessionStorage.setItem("ordsprak-last", String(idx)); } catch (e) {}
-  return sayings[idx];
+  <button id="next-quote-button" type="button">Nytt visdomsord</button>
+</main>
+
+<script type="module">
+"use strict";
+
+/* ==========================================================================
+   1. KONSTANTER OCH DATA
+   ========================================================================== */
+
+const THEME_QUERY_PARAMETER = "tema";
+const THEME_ATTRIBUTE = "data-theme";
+const DEFAULT_THEME_ID = "funkis";
+const THEME_IDS = Object.freeze(["funkis", "deco", "station", "bakelit", "neon", "minimal"]);
+
+const LAST_QUOTE_STORAGE_KEY = "klocka-senaste-ordsprak";
+const NO_PREVIOUS_QUOTE_INDEX = -1;
+const QUOTES_UNAVAILABLE_MESSAGE = "Visdomsorden kunde inte hämtas just nu.";
+
+const OPENING_QUOTATION_MARK = "\u201D";
+const CLOSING_QUOTATION_MARK = "\u201D";
+const AUTHOR_PREFIX = "\u2014 ";
+
+const QUOTES_MODULE_PATH = "./quotes.js";
+
+
+/* ==========================================================================
+   2. DOM-REFERENSER
+   ========================================================================== */
+
+function requireElement(elementId) {
+  const element = document.getElementById(elementId);
+  // Fail fast: saknad nod betyder att HTML och JS glidit isär vid en ändring
+  if (element === null) throw new Error(`Saknar element med id "${elementId}"`);
+  return element;
 }
 
-function showNewSaying() {
-  document.getElementById("quote").textContent = pickSaying();
+const dom = Object.freeze({
+  figure: requireElement("quote-figure"),
+  text: requireElement("quote-text"),
+  author: requireElement("quote-author"),
+  nextButton: requireElement("next-quote-button"),
+  themeColorMeta: document.querySelector('meta[name="theme-color"]')
+});
+
+
+/* ==========================================================================
+   3. TEMA
+   ========================================================================== */
+
+/* Klockan kan skicka med sitt tema i adressen så att sidan känns som en
+   fortsättning på skärmen man just skannat. Saknas eller är värdet okänt
+   används standardtemat. */
+function readThemeFromQuery() {
+  // URLSearchParams tar en ren sträng och behöver ingen basadress att utgå från
+  const requestedTheme = new URLSearchParams(window.location.search).get(THEME_QUERY_PARAMETER);
+  return THEME_IDS.includes(requestedTheme) ? requestedTheme : DEFAULT_THEME_ID;
 }
-document.getElementById("new-btn").addEventListener("click", showNewSaying);
-showNewSaying();
+
+function applyTheme(themeId) {
+  document.documentElement.setAttribute(THEME_ATTRIBUTE, themeId);
+  if (dom.themeColorMeta === null) return;
+
+  const backgroundColor = getComputedStyle(document.documentElement)
+    .getPropertyValue("--background-color").trim();
+  if (backgroundColor) dom.themeColorMeta.setAttribute("content", backgroundColor);
+}
+
+
+/* ==========================================================================
+   4. VAL AV ORDSPRÅK
+   ========================================================================== */
+
+/* Citaten bor i quotes.js så att de bara finns på ett ställe — samma fil
+   används av Klockan.html. */
+let quotes = [];
+
+async function loadQuotes() {
+  const quotesModule = await import(QUOTES_MODULE_PATH);
+  quotes = quotesModule.QUOTES;
+}
+
+function readLastQuoteIndex() {
+  try {
+    const storedValue = Number(window.localStorage.getItem(LAST_QUOTE_STORAGE_KEY));
+    const isUsable = Number.isInteger(storedValue) && storedValue >= 0 && storedValue < quotes.length;
+    return isUsable ? storedValue : NO_PREVIOUS_QUOTE_INDEX;
+  } catch (error) {
+    /* Lagring kan vara avstängd, till exempel i privat läge. Då upprepas ett
+       citat ibland, men sidan fungerar precis som vanligt. */
+    return NO_PREVIOUS_QUOTE_INDEX;
+  }
+}
+
+function writeLastQuoteIndex(quoteIndex) {
+  try {
+    window.localStorage.setItem(LAST_QUOTE_STORAGE_KEY, String(quoteIndex));
+  } catch (error) {
+    // Se kommentaren i readLastQuoteIndex — misslyckad lagring är ofarlig
+  }
+}
+
+/* Drar ett nytt citat och undviker det som visades sist, så att två skanningar
+   i rad inte ger samma text. */
+function pickQuoteIndex(previousIndex) {
+  if (quotes.length < 2) return 0;
+
+  let nextIndex = previousIndex;
+  while (nextIndex === previousIndex) {
+    nextIndex = Math.floor(Math.random() * quotes.length);
+  }
+  return nextIndex;
+}
+
+
+/* ==========================================================================
+   5. VISNING
+   ========================================================================== */
+
+function showQuote(quoteIndex) {
+  const quote = quotes[quoteIndex];
+  dom.text.textContent = `${OPENING_QUOTATION_MARK}${quote.text}${CLOSING_QUOTATION_MARK}`;
+  dom.author.textContent = `${AUTHOR_PREFIX}${quote.author}`;
+
+  // Layouten måste läsas om, annars startar inte animationen om vid nytt citat
+  dom.figure.style.animation = "none";
+  void dom.figure.offsetWidth;
+  dom.figure.style.animation = "";
+}
+
+let currentQuoteIndex = NO_PREVIOUS_QUOTE_INDEX;
+
+function drawNewQuote() {
+  currentQuoteIndex = pickQuoteIndex(currentQuoteIndex);
+  writeLastQuoteIndex(currentQuoteIndex);
+  showQuote(currentQuoteIndex);
+}
+
+dom.nextButton.addEventListener("click", drawNewQuote);
+
+
+/* ==========================================================================
+   6. START
+   ========================================================================== */
+
+/* Startas som en vanlig async-funktion i stället för med await direkt i
+   modulen. Det håller igång även på äldre webbläsare och gör steget testbart. */
+async function loadAndShowFirstQuote() {
+  try {
+    await loadQuotes();
+    currentQuoteIndex = readLastQuoteIndex();
+    drawNewQuote();
+  } catch (error) {
+    console.warn("Visdomsorden kunde inte laddas:", error);
+    dom.text.textContent = QUOTES_UNAVAILABLE_MESSAGE;
+    dom.author.textContent = "";
+    dom.nextButton.hidden = true;
+  }
+}
+
+applyTheme(readThemeFromQuery());
+loadAndShowFirstQuote();
 </script>
 </body>
 </html>

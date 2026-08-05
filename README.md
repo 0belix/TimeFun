@@ -1,101 +1,143 @@
 # Klockan – PWA
 
 En klocka som fyller hela skärmen, med analog urtavla, digital klocka,
-namn, ett litet påskägg, och en rad valbara extra funktioner.
+namn, ett litet påskägg och en rad valbara extra funktioner.
+
+---
+
+## Vad som ändrats sedan förra versionen
+
+Dina två senaste förbättringar finns kvar och är oförändrade i sak:
+
+- **Fallbladstavlan med ett kort per siffra** — du hade rätt, ett blad per
+  tecken är hur en riktig tavla fungerar. Nu viker dessutom bara den siffra
+  som faktiskt ändras.
+- **Din vapensköld** på den eleganta urtavlan. Den ligger numera som
+  `logo.png` i stället för base64 inuti HTML-filen, så att koden går att
+  läsa och jämföra. Bilden är oförändrad.
+
+### Buggar som rättats
+
+| | Vad som hände |
+|---|---|
+| 🟠 | `setInterval` driftade — klockan kunde hoppa över sekunder. Nu en självkorrigerande timer. |
+| 🟠 | Partikelloopen ritade om skärmen 60 ggr/s **året runt**, även utan effekt. Stoppas nu helt. |
+| 🟠 | Rastsignalen hade ett tvåsekundersfönster och missades helt om appen legat i bakgrunden. |
+| 🟠 | Flip-klockan byggde om alla kort varje sekund — 300 nya DOM-noder i minuten. |
+| 🟡 | Påskägget gick inte att nå i läget "Bara digital". |
+| 🟡 | Fel typsnitt satt kvar vid byte till flip-stil (inline-stil vann över CSS). |
+| 🟡 | `"25:99"` godkändes som klockslag. |
+| 🟡 | Inställningar försvann om panelen stängdes utan att trycka "Klar". |
+| 🟡 | Canvas saknade `devicePixelRatio` — suddiga partiklar. |
+| 🔴 | QR-biblioteket hämtades från en CDN utan integritetskontroll. |
+
+### Nytt
+
+- **Sex teman** i stället för fyra urtavlestilar. Varje tema styr palett,
+  typsnitt, urtavlans uppbyggnad och panelernas utseende: Funkis, Deco,
+  Station, Bakelit, Neon, Minimal. Din "Lyxig" lever vidare som Deco.
+- **Vikanimation** på fallbladen — fyra lager per kort, med studs mot stoppet.
+- **QR-koden är tillbaka, utan internetberoende.** Kodaren är inbyggd
+  (byte-läge, nivå M) och verifierad mot ISO-tabellerna och en riktig
+  avkodare. Det var nätberoendet som gjorde den opålitlig, inte funktionen.
+- **`quotes.js`** — citaten på ett enda ställe, delade med `ordsprak.html`.
+- **Robust serviceworker.** Din `cache.addAll()` avbryter hela
+  installationen om en enda fil saknas, och då försvinner offline-läget
+  utan felmeddelande. Nu hämtas filerna var för sig.
+
+### Bra att veta
+
+- **Sparade inställningar följer med automatiskt.** Gamla nycklar
+  (`frukostTime`, `bg`, `clockStyle` …) migreras vid första starten.
+  Ingen tappar sina val.
+- **Monogramfältet finns kvar.** Lämnar du det tomt visas din vapensköld,
+  skriver du något visas den texten. Automatiska initialer från namnen
+  utgick — den funktionen togs bort redan i din version.
+- Alla identifierare är engelska, alla kommentarer och all text mot
+  användaren är svensk.
+
+---
 
 ## Grundfunktioner
-- **Analog urtavla** (SVG, uppdateras varje sekund) och **digital klocka**
-  — visa båda, eller bara den ena, via Inställningar → Visning.
-- **Fritt val av färg** på förgrund och bakgrund. Sparas i webbläsaren.
-- **Ett eller två namn** under klockan, med valfritt typsnitt (Standard,
-  Fraktur, Comic Sans, Filttusch, Bubblig, Retro-tv).
+
+- **Analog urtavla** (SVG) och **digital klocka** — visa båda eller bara
+  den ena, via Inställningar → Visning.
+- **Fritt val av färg**, som ett alternativ till temats egen palett.
+- **Ett eller två namn** under klockan med valfritt typsnitt.
 - **Helskärm** (nere till vänster) och **wake lock** så skärmen inte somnar.
 
-## Urtavlestilar — svepbara
-Sväp direkt åt vänster/höger på den analoga klockan eller på digital-
-klockan för att bläddra mellan stilar (en liten prickrad under varje
-visar var i karusellen du är). Går även att välja i Inställningar.
+## Teman — svepbara
 
-**Analog:**
-- **Klassisk** — den ursprungliga stilen med siffror och minutstreck.
-- **Minimalistisk** — bara timstreck, inga siffror.
-- **Neon** — samma som klassisk men med ett mjukt glow i förgrundsfärgen.
-- **Lyxig** — elegant seriftypsnitt (Playfair Display) och en liten
-  egen vapensköld-logga (bakad in i appen, base64-kodad så den fungerar
-  offline) under mitten. Det här är en helt egen, orginal design —
-  *inte* en kopia av något varumärkes logotyp. Vill du byta ut loggan
-  mot en egen bild, se "Anpassa" nedan.
+Svep åt vänster eller höger på den analoga klockan för att byta tema, och
+på digitalklockan för att byta mellan Vanlig och Flip-klocka. Prickraden
+under visar var i karusellen du är. Går även att välja i Inställningar.
 
-**Digital:**
-- **Vanlig** — text i det typsnitt du valt för digitalklockan.
-- **Flip-klocka** — varje enskild siffra (alla sex: TT:MM:SS) visas som
-  sitt eget "split-flap"-kort med en delningslinje i mitten, precis som
-  på en äkta gammaldags flygplats- eller tågstationstavla — inte bara
-  en bricka per par.
+| Tema | Urtavla |
+|---|---|
+| **Funkis** | Alla siffror, minutring, batongvisare med motvikt |
+| **Deco** | Solstrålar, siffror vid 12/3/6/9, rombvisare, vapenskölden |
+| **Station** | Inga siffror, röd sekundvisare med skiva |
+| **Bakelit** | Glödande radioskala, kondenserat typsnitt |
+| **Neon** | Glöd, hårfina visare |
+| **Minimal** | Fyra streck och inget mer |
 
-Tryck fortfarande **5 gånger** (korta tryck, inte svep) på den analoga
-klockan för att öppna påskägget med skärmtangentbordet — se nedan.
+Tryck **5 gånger** (korta tryck, inte svep) på klockan för att öppna
+påskägget med skärmtangentbordet. Skriv "Stockholm" så visas ett slumpat
+citat. Fungerar på både den analoga och den digitala klockan.
 
-## Raster: frukost, lunch, fika
-I Inställningar → Raster ställer du in klockslag för Frukost, Lunch och
-Fika (standard 09:00 / 12:00 / 14:30). Nedräkningen räknar alltid till
-nästa kommande rast och byter automatiskt mål när en rast passeras —
-oavsett vilken ordning du råkar mata in tiderna i.
+## Raster
 
-- **Visa nedräkning till nästa rast**: en liten ruta uppe i vänstra
-  hörnet med tid kvar. Helt valfri, av som standard.
-- **Spela ljud när en rast börjar**: en kort tvåtonssignal (genereras i
-  webbläsaren, ingen ljudfil behövs) spelas exakt när frukost, lunch
-  eller fika börjar. Fungerar oberoende av om rutan syns eller inte.
-  Webbläsare kräver interaktion innan ljud får spelas — det sker
-  automatiskt vid första tryck någonstans i appen.
+Ställ in klockslag för Frukost, Lunch och Fika (standard 09:00 / 12:00 /
+14:30). Nedräkningen räknar alltid till nästa kommande rast, oavsett i
+vilken ordning tiderna matas in.
+
+Ljudsignalen är en kort tvåtonssignal som genereras i webbläsaren. Den
+spelas även om appen legat i bakgrunden en stund — men tystnar om rasten
+passerade för mer än fem minuter sedan.
 
 ## Säsongseffekter
-Valfri (på som standard) diskret partikeleffekt ovanpå allt annat:
-- **Snö** i december och fram till och med 6 januari (trettondagen).
-- **Konfetti** på nyårsafton (31/12) och nyårsdagen (1/1).
-- **Extra fest-dag**: fyll i ett eget datum (format `MM-DD`, t.ex. `04-12`
-  för 12 april) i Inställningar för konfetti även den dagen — perfekt
-  för en födelsedag.
 
-## Påskägget
-Tryck (inte sväp) **5 gånger** på den analoga klockan inom ett par
-sekunder för att öppna ett skärmtangentbord. Skriv "Stockholm" så visas
-ett slumpat citat av Astrid Lindgren eller Vilhelm Moberg.
+- **Snö** i december till och med trettondagen.
+- **Konfetti** på nyårsafton och nyårsdagen.
+- **Extra festdag** — eget datum i formatet `MM-DD`.
+
+Stängs automatiskt av om systemet är inställt på reducerad rörelse.
+
+---
 
 ## Filer
+
 ```
-index.html          – appen
-manifest.json        – gör appen installerbar
-sw.js                – service worker, cache för offline
-icon-192.png / icon-512.png
+index.html                  – appen
+quotes.js                   – citaten, delas med ordsprak.html
+ordsprak.html               – sidan QR-koden pekar på
+logo.png                    – vapenskölden på Deco-tavlan
+manifest.json               – gör appen installerbar
+sw.js                       – service worker, cache för offline
+icon-192.png / icon-512.png / icon-maskable-512.png
 ```
 
 ## Installation
-1. Ladda upp alla filer i repots rot på GitHub.
-2. Aktivera GitHub Pages (Settings → Pages → Deploy from branch → main → root).
-3. Öppna länken i Chrome på Android-plattan → meny → "Lägg till på
-   startskärmen" / "Installera app".
-4. Tryck "⛶" nere till vänster för extra helskärmsläge utöver PWA-läget.
 
-## Att känna till
-- **Google Fonts** hämtas från internet. Fungerar offline efter första
-  besöket tack vare service workern, men om plattan aldrig varit
-  uppkopplad visas standard-typsnitt istället.
-- Den "lyxiga" urtavlan med logga är en **egen, orginal design** — inte
-  en kopia av något bilmärkes eller varumärkes logotyp.
-- Citaten (påskägget) är noga utvalda för att vara verifierbara mot
-  flera oberoende källor.
+1. Lägg alla filer i repots rot.
+2. Aktivera GitHub Pages (Settings → Pages → Deploy from branch → main → root).
+3. Öppna länken i Chrome på plattan → meny → "Installera app".
+
+**Serviceworkern kräver `https://` eller `localhost`.** Öppnar du filen
+direkt från disk blir det varken app eller offline-läge — då säger appen
+till i stället för att tiga.
 
 ## Anpassa
-- **Citaten**: `quotes`-arrayen i `index.html`.
-- **Urtavlestilarna**: `CLOCK_STYLES` / `DIGITAL_STYLES` i `index.html`,
-  plus motsvarande CSS-klasser (`#clock.style-...`, `#digital-clock.style-...`).
-- **Loggan på den lyxiga urtavlan**: sök efter `LOGO_DATA_URI` i
-  `index.html` — det är en base64-kodad PNG. Byt ut hela strängen mot
-  din egen bild (kör t.ex. `base64 -i din-logga.png` i terminalen och
-  klistra in resultatet), och justera `logoW`/`logoH` i samma funktion
-  om bildens proportioner skiljer sig mycket.
-- **Rasttiderna** (standardvärden): `defaults.frukostTime` m.fl.
-- **Säsongseffekternas datum**: funktionen `getSeasonalEffect(now)`.
-- **Ljudsignalen**: funktionen `playChime()`.
+
+| Vad | Var |
+|---|---|
+| Citaten | `quotes.js` |
+| Teman | `THEMES` i `index.html`, plus `:root[data-theme="..."]` i CSS |
+| Vapenskölden | byt ut `logo.png`, justera `DIAL_CREST_WIDTH` / `DIAL_CREST_HEIGHT` |
+| Rasttider | `DEFAULT_SETTINGS.breakfastTime` m.fl. |
+| Säsongsdatum | `getSeasonalEffect()` |
+| Ljudsignalen | `playChime()` och `CHIME_*`-konstanterna |
+| Vikningens fart | `--flip-leaf-duration` i CSS |
+
+Höj `CACHE_VERSION` i `sw.js` när du ändrat `index.html`, annars ligger
+den gamla versionen kvar i cachen på plattan.
