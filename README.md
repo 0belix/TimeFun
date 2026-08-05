@@ -40,7 +40,9 @@ Dina två senaste förbättringar finns kvar och är oförändrade i sak:
 - **QR-koden är tillbaka, utan internetberoende.** Kodaren är inbyggd
   (byte-läge, nivå M) och verifierad mot ISO-tabellerna och en riktig
   avkodare. Det var nätberoendet som gjorde den opålitlig, inte funktionen.
-- **`quotes.js`** — citaten på ett enda ställe, delade med `ordsprak.html`.
+- **`quotes.js`** — två skilda samlingar på ett enda ställe: `QUOTES` för
+  påskägget och `PROVERBS` för QR-sidan. De ska inte överlappa — den som
+  skannar koden på väggen ska få något annat än den som hittat påskägget.
 - **Robust serviceworker.** Din `cache.addAll()` avbryter hela
   installationen om en enda fil saknas, och då försvinner offline-läget
   utan felmeddelande. Nu hämtas filerna var för sig.
@@ -83,7 +85,7 @@ under visar var i karusellen du är. Går även att välja i Inställningar.
 
 Tryck **5 gånger** (korta tryck, inte svep) på klockan för att öppna
 påskägget med skärmtangentbordet. Skriv "Stockholm" så visas ett slumpat
-citat. Fungerar på både den analoga och den digitala klockan.
+litterärt citat. Fungerar på både den analoga och den digitala klockan.
 
 ## Raster
 
@@ -110,7 +112,7 @@ Stängs automatiskt av om systemet är inställt på reducerad rörelse.
 ```
 index.html                  – appen
 quotes.js                   – citaten, delas med ordsprak.html
-ordsprak.html               – sidan QR-koden pekar på
+ordsprak.html               – svenska ordspråk, sidan QR-koden pekar på
 logo.png                    – vapenskölden på Deco-tavlan
 manifest.json               – gör appen installerbar
 sw.js                       – service worker, cache för offline
@@ -131,7 +133,8 @@ till i stället för att tiga.
 
 | Vad | Var |
 |---|---|
-| Citaten | `quotes.js` |
+| Citaten i påskägget | `QUOTES` i `quotes.js` |
+| Ordspråken på QR-sidan | `PROVERBS` i `quotes.js` |
 | Teman | `THEMES` i `index.html`, plus `:root[data-theme="..."]` i CSS |
 | Vapenskölden | byt ut `logo.png`, justera `DIAL_CREST_WIDTH` / `DIAL_CREST_HEIGHT` |
 | Rasttider | `DEFAULT_SETTINGS.breakfastTime` m.fl. |

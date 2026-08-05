@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Ett visdomsord</title>
-<meta name="description" content="Ett slumpat visdomsord från Klockan." />
+<title>Ett ordspråk</title>
+<meta name="description" content="Ett slumpat svenskt ordspråk från Klockan." />
 <meta name="theme-color" content="#2E181B" />
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
@@ -19,7 +19,7 @@
      filerna delar ingen stilmall.
      ========================================================================== */
   :root {
-    --quote-fade-duration: 420ms;
+    --proverb-fade-duration: 420ms;
     --content-max-width: 34rem;
     --radius-pill: 999px;
   }
@@ -30,7 +30,7 @@
     --accent-color: #C9A227;
     --muted-color: #A98A5B;
     --interface-font: 'Jost', system-ui, sans-serif;
-    --quote-letter-spacing: 0.01em;
+    --proverb-letter-spacing: 0.01em;
   }
   :root[data-theme="deco"] {
     --background-color: #0B0B0D;
@@ -38,7 +38,7 @@
     --accent-color: #D4AF6A;
     --muted-color: #8C7745;
     --interface-font: 'Poiret One', 'Jost', sans-serif;
-    --quote-letter-spacing: 0.05em;
+    --proverb-letter-spacing: 0.05em;
   }
   :root[data-theme="station"] {
     --background-color: #F2F0EB;
@@ -46,7 +46,7 @@
     --accent-color: #D3312A;
     --muted-color: #6B7075;
     --interface-font: 'Jost', system-ui, sans-serif;
-    --quote-letter-spacing: 0;
+    --proverb-letter-spacing: 0;
   }
   :root[data-theme="bakelit"] {
     --background-color: #1A1310;
@@ -54,7 +54,7 @@
     --accent-color: #FF8A2B;
     --muted-color: #A9743A;
     --interface-font: 'Oswald', system-ui, sans-serif;
-    --quote-letter-spacing: 0.03em;
+    --proverb-letter-spacing: 0.03em;
   }
   :root[data-theme="neon"] {
     --background-color: #08070E;
@@ -62,7 +62,7 @@
     --accent-color: #FF3DCB;
     --muted-color: #4E8FA3;
     --interface-font: 'Jost', system-ui, sans-serif;
-    --quote-letter-spacing: 0.04em;
+    --proverb-letter-spacing: 0.04em;
   }
   :root[data-theme="minimal"] {
     --background-color: #101112;
@@ -70,7 +70,7 @@
     --accent-color: #E8E8E6;
     --muted-color: #7C7F83;
     --interface-font: 'Jost', system-ui, sans-serif;
-    --quote-letter-spacing: 0.06em;
+    --proverb-letter-spacing: 0.06em;
   }
 
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -103,35 +103,35 @@
   #dial-mark .hand { stroke: var(--foreground-color); stroke-linecap: round; }
   #dial-mark .hub { fill: var(--accent-color); }
 
-  #quote-figure {
+  #proverb-figure {
     margin: 0;
     max-width: var(--content-max-width);
     display: flex;
     flex-direction: column;
     gap: 1.6rem;
-    animation: quote-appear var(--quote-fade-duration) ease-out both;
+    animation: proverb-appear var(--proverb-fade-duration) ease-out both;
   }
-  @keyframes quote-appear {
+  @keyframes proverb-appear {
     from { opacity: 0; transform: translateY(0.7rem); }
     to { opacity: 1; transform: none; }
   }
 
-  #quote-text {
+  #proverb-text {
     margin: 0;
     font-size: clamp(1.35rem, 5.6vw, 2.1rem);
     font-style: italic;
     line-height: 1.45;
-    letter-spacing: var(--quote-letter-spacing);
+    letter-spacing: var(--proverb-letter-spacing);
     text-wrap: balance;
   }
 
-  #quote-author {
+  #proverb-source {
     font-size: clamp(0.95rem, 3.4vw, 1.15rem);
     color: var(--muted-color);
     font-style: normal;
   }
   /* Tunn linje ovanför upphovspersonen, samma gest som mässingsdetaljerna */
-  #quote-author::before {
+  #proverb-source::before {
     content: "";
     display: block;
     width: 2.5rem;
@@ -141,7 +141,7 @@
     opacity: 0.6;
   }
 
-  #next-quote-button {
+  #next-proverb-button {
     background: none;
     border: 1px solid var(--accent-color);
     color: var(--foreground-color);
@@ -156,11 +156,11 @@
     border-radius: var(--radius-pill);
     cursor: pointer;
   }
-  #next-quote-button:active { background: var(--accent-color); color: var(--background-color); }
-  #next-quote-button:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 3px; }
+  #next-proverb-button:active { background: var(--accent-color); color: var(--background-color); }
+  #next-proverb-button:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 3px; }
 
   @media (prefers-reduced-motion: reduce) {
-    #quote-figure { animation: none; }
+    #proverb-figure { animation: none; }
   }
 </style>
 </head>
@@ -181,12 +181,12 @@
     <circle class="hub" cx="50" cy="50" r="4" />
   </svg>
 
-  <figure id="quote-figure">
-    <blockquote id="quote-text"></blockquote>
-    <figcaption id="quote-author"></figcaption>
+  <figure id="proverb-figure">
+    <blockquote id="proverb-text"></blockquote>
+    <figcaption id="proverb-source"></figcaption>
   </figure>
 
-  <button id="next-quote-button" type="button">Nytt visdomsord</button>
+  <button id="next-proverb-button" type="button">Nytt ordspråk</button>
 </main>
 
 <script type="module">
@@ -201,15 +201,15 @@ const THEME_ATTRIBUTE = "data-theme";
 const DEFAULT_THEME_ID = "funkis";
 const THEME_IDS = Object.freeze(["funkis", "deco", "station", "bakelit", "neon", "minimal"]);
 
-const LAST_QUOTE_STORAGE_KEY = "klocka-senaste-ordsprak";
-const NO_PREVIOUS_QUOTE_INDEX = -1;
-const QUOTES_UNAVAILABLE_MESSAGE = "Visdomsorden kunde inte hämtas just nu.";
+const LAST_PROVERB_STORAGE_KEY = "klocka-senaste-ordsprak";
+const NO_PREVIOUS_PROVERB_INDEX = -1;
+const PROVERBS_UNAVAILABLE_MESSAGE = "Ordspråken kunde inte hämtas just nu.";
 
 const OPENING_QUOTATION_MARK = "\u201D";
 const CLOSING_QUOTATION_MARK = "\u201D";
-const AUTHOR_PREFIX = "\u2014 ";
+const PROVERB_SOURCE_LABEL = "Svenskt ordspråk";
 
-const QUOTES_MODULE_PATH = "./quotes.js";
+const TEXTS_MODULE_PATH = "./quotes.js";
 
 
 /* ==========================================================================
@@ -224,10 +224,10 @@ function requireElement(elementId) {
 }
 
 const dom = Object.freeze({
-  figure: requireElement("quote-figure"),
-  text: requireElement("quote-text"),
-  author: requireElement("quote-author"),
-  nextButton: requireElement("next-quote-button"),
+  figure: requireElement("proverb-figure"),
+  text: requireElement("proverb-text"),
+  source: requireElement("proverb-source"),
+  nextButton: requireElement("next-proverb-button"),
   themeColorMeta: document.querySelector('meta[name="theme-color"]')
 });
 
@@ -259,43 +259,43 @@ function applyTheme(themeId) {
    4. VAL AV ORDSPRÅK
    ========================================================================== */
 
-/* Citaten bor i quotes.js så att de bara finns på ett ställe — samma fil
-   används av Klockan.html. */
-let quotes = [];
+/* Ordspråken bor i quotes.js. Den filen har två skilda samlingar: påskägget i
+   index.html använder QUOTES, den här sidan PROVERBS. De ska inte överlappa. */
+let proverbs = [];
 
-async function loadQuotes() {
-  const quotesModule = await import(QUOTES_MODULE_PATH);
-  quotes = quotesModule.QUOTES;
+async function loadProverbs() {
+  const textsModule = await import(TEXTS_MODULE_PATH);
+  proverbs = textsModule.PROVERBS;
 }
 
-function readLastQuoteIndex() {
+function readLastProverbIndex() {
   try {
-    const storedValue = Number(window.localStorage.getItem(LAST_QUOTE_STORAGE_KEY));
-    const isUsable = Number.isInteger(storedValue) && storedValue >= 0 && storedValue < quotes.length;
-    return isUsable ? storedValue : NO_PREVIOUS_QUOTE_INDEX;
+    const storedValue = Number(window.localStorage.getItem(LAST_PROVERB_STORAGE_KEY));
+    const isUsable = Number.isInteger(storedValue) && storedValue >= 0 && storedValue < proverbs.length;
+    return isUsable ? storedValue : NO_PREVIOUS_PROVERB_INDEX;
   } catch (error) {
     /* Lagring kan vara avstängd, till exempel i privat läge. Då upprepas ett
-       citat ibland, men sidan fungerar precis som vanligt. */
-    return NO_PREVIOUS_QUOTE_INDEX;
+       ordspråk ibland, men sidan fungerar precis som vanligt. */
+    return NO_PREVIOUS_PROVERB_INDEX;
   }
 }
 
-function writeLastQuoteIndex(quoteIndex) {
+function writeLastProverbIndex(proverbIndex) {
   try {
-    window.localStorage.setItem(LAST_QUOTE_STORAGE_KEY, String(quoteIndex));
+    window.localStorage.setItem(LAST_PROVERB_STORAGE_KEY, String(proverbIndex));
   } catch (error) {
-    // Se kommentaren i readLastQuoteIndex — misslyckad lagring är ofarlig
+    // Se kommentaren i readLastProverbIndex — misslyckad lagring är ofarlig
   }
 }
 
-/* Drar ett nytt citat och undviker det som visades sist, så att två skanningar
+/* Drar ett nytt ordspråk och undviker det som visades sist, så att två skanningar
    i rad inte ger samma text. */
-function pickQuoteIndex(previousIndex) {
-  if (quotes.length < 2) return 0;
+function pickProverbIndex(previousIndex) {
+  if (proverbs.length < 2) return 0;
 
   let nextIndex = previousIndex;
   while (nextIndex === previousIndex) {
-    nextIndex = Math.floor(Math.random() * quotes.length);
+    nextIndex = Math.floor(Math.random() * proverbs.length);
   }
   return nextIndex;
 }
@@ -305,26 +305,26 @@ function pickQuoteIndex(previousIndex) {
    5. VISNING
    ========================================================================== */
 
-function showQuote(quoteIndex) {
-  const quote = quotes[quoteIndex];
-  dom.text.textContent = `${OPENING_QUOTATION_MARK}${quote.text}${CLOSING_QUOTATION_MARK}`;
-  dom.author.textContent = `${AUTHOR_PREFIX}${quote.author}`;
+function showProverb(proverbIndex) {
+  const proverb = proverbs[proverbIndex];
+  dom.text.textContent = `${OPENING_QUOTATION_MARK}${proverb}${CLOSING_QUOTATION_MARK}`;
+  dom.source.textContent = PROVERB_SOURCE_LABEL;
 
-  // Layouten måste läsas om, annars startar inte animationen om vid nytt citat
+  // Layouten måste läsas om, annars startar inte animationen om vid nytt ordspråk
   dom.figure.style.animation = "none";
   void dom.figure.offsetWidth;
   dom.figure.style.animation = "";
 }
 
-let currentQuoteIndex = NO_PREVIOUS_QUOTE_INDEX;
+let currentProverbIndex = NO_PREVIOUS_PROVERB_INDEX;
 
-function drawNewQuote() {
-  currentQuoteIndex = pickQuoteIndex(currentQuoteIndex);
-  writeLastQuoteIndex(currentQuoteIndex);
-  showQuote(currentQuoteIndex);
+function drawNewProverb() {
+  currentProverbIndex = pickProverbIndex(currentProverbIndex);
+  writeLastProverbIndex(currentProverbIndex);
+  showProverb(currentProverbIndex);
 }
 
-dom.nextButton.addEventListener("click", drawNewQuote);
+dom.nextButton.addEventListener("click", drawNewProverb);
 
 
 /* ==========================================================================
@@ -333,21 +333,21 @@ dom.nextButton.addEventListener("click", drawNewQuote);
 
 /* Startas som en vanlig async-funktion i stället för med await direkt i
    modulen. Det håller igång även på äldre webbläsare och gör steget testbart. */
-async function loadAndShowFirstQuote() {
+async function loadAndShowFirstProverb() {
   try {
-    await loadQuotes();
-    currentQuoteIndex = readLastQuoteIndex();
-    drawNewQuote();
+    await loadProverbs();
+    currentProverbIndex = readLastProverbIndex();
+    drawNewProverb();
   } catch (error) {
-    console.warn("Visdomsorden kunde inte laddas:", error);
-    dom.text.textContent = QUOTES_UNAVAILABLE_MESSAGE;
-    dom.author.textContent = "";
+    console.warn("Ordspråken kunde inte laddas:", error);
+    dom.text.textContent = PROVERBS_UNAVAILABLE_MESSAGE;
+    dom.source.textContent = "";
     dom.nextButton.hidden = true;
   }
 }
 
 applyTheme(readThemeFromQuery());
-loadAndShowFirstQuote();
+loadAndShowFirstProverb();
 </script>
 </body>
 </html>
