@@ -790,7 +790,7 @@
     <label class="checkbox-row">
       <input type="checkbox" id="same-font-toggle" /> Samma typsnitt för namn och digitalklocka
     </label>
-    <label id="clock-font-row">Typsnitt för digitalklockan (vanlig stil) <select id="clock-font-select"></select></label>
+    <label id="clock-font-row">Typsnitt för digitalklockan <select id="clock-font-select"></select></label>
 
     <h3>Raster</h3>
     <div class="time-row">
@@ -1509,9 +1509,12 @@ function applyTypography() {
   // Tom sträng återlämnar kontrollen till temats CSS-variabel
   dom.names.style.fontFamily = findFontFamily(settings.nameFontId);
 
+  /* Typsnittet gäller båda digitalstilarna. Tidigare ignorerades valet helt i
+     flip-läget, vilket gav en kontroll som såg klickbar ut men inte gjorde
+     något. Alternativet "Följ temat" ger tom sträng och lämnar tillbaka
+     styrningen till temats CSS-variabel. */
   const clockFontId = settings.useSameFontForClock ? settings.nameFontId : settings.clockFontId;
-  dom.digitalClock.style.fontFamily =
-    settings.digitalStyleId === "plain" ? findFontFamily(clockFontId) : "";
+  dom.digitalClock.style.fontFamily = findFontFamily(clockFontId);
 }
 
 function applySettings() {
