@@ -159,6 +159,14 @@
   #next-proverb-button:active { background: var(--accent-color); color: var(--background-color); }
   #next-proverb-button:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 3px; }
 
+  #version-line {
+    margin: 0;
+    font-size: 0.7rem;
+    color: var(--muted-color);
+    opacity: 0.6;
+    font-variant-numeric: tabular-nums;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     #proverb-figure { animation: none; }
   }
@@ -187,6 +195,7 @@
   </figure>
 
   <button id="next-proverb-button" type="button">Nytt ordspråk</button>
+  <p id="version-line"></p>
 </main>
 
 <script type="module">
@@ -208,6 +217,7 @@ const PROVERBS_UNAVAILABLE_MESSAGE = "Ordspråken kunde inte hämtas just nu.";
 const OPENING_QUOTATION_MARK = "\u201D";
 const CLOSING_QUOTATION_MARK = "\u201D";
 const PROVERB_SOURCE_LABEL = "Svenskt ordspråk";
+const PAGE_VERSION = "3.0";
 
 const TEXTS_MODULE_PATH = "./quotes.js";
 
@@ -350,6 +360,11 @@ async function loadAndShowFirstProverb() {
     dom.nextButton.hidden = true;
   }
 }
+
+/* Filens datum kommer från serverns svar. Visar det något gammalt är det en
+   cachad kopia som visas, inte det som ligger på servern. */
+requireElement("version-line").textContent =
+  `Version ${PAGE_VERSION} · ${document.lastModified}`;
 
 applyTheme(readThemeFromQuery());
 loadAndShowFirstProverb();
