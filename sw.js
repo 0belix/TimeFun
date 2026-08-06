@@ -9,7 +9,7 @@
    då fastnar plattan på gamla filer utan att något syns.
    ========================================================================== */
 
-const CACHE_VERSION = "klockan-v3";
+const CACHE_VERSION = "klockan-v2";
 const APP_START_PAGE = "./index.html";
 
 /* Filer som ska finnas i cachen direkt vid installationen. */
@@ -30,6 +30,9 @@ const FONT_HOSTS = Object.freeze(["fonts.googleapis.com", "fonts.gstatic.com"]);
 const NAVIGATION_REQUEST_MODE = "navigate";
 const GET_METHOD = "GET";
 const OPAQUE_RESPONSE_TYPE = "opaque";
+/* Sidan frågar efter den här strängen för att kunna visa vilken cache som
+   faktiskt är i tjänst. Samma sträng finns i index.html. */
+const VERSION_REQUEST_MESSAGE = "vilken-cacheversion";
 
 
 /* ==========================================================================
@@ -154,4 +157,16 @@ self.addEventListener("fetch", (event) => {
   if (isOwnFile) {
     event.respondWith(respondWithCachedThenUpdate(request));
   }
+});
+
+
+/* ==========================================================================
+   Besked till sidan
+   ========================================================================== */
+
+/* Utan det här går det inte att se vilken serviceworker som är i tjänst — och
+   det är just den frågan som är svår att svara på när något känns gammalt. */
+self.addEventListener("message", (event) => {
+  if (event.data !== VERSION_REQUEST_MESSAGE) return;
+  event.ports[0]?.postMessage({ cacheVersion: CACHE_VERSION });
 });

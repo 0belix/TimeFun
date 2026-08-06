@@ -801,6 +801,24 @@
   .checkbox-row { flex-direction: row !important; align-items: center; gap: 1em !important; }
   .checkbox-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent-color); }
   #settings-panel .primary-button { margin-top: 0.4em; padding: 12px 20px; font-size: 1rem; }
+  .version-line {
+    margin: -0.4em 0 0;
+    font-size: 0.8rem;
+    color: var(--panel-heading);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
+  }
+  .secondary-button {
+    background: var(--panel-surface);
+    border: 1px solid var(--panel-border);
+    color: var(--panel-label);
+    font-family: var(--interface-font);
+    font-size: 0.9rem;
+    padding: 10px 16px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+  }
+  .secondary-button:active { background: var(--panel-surface-strong); }
   .field-hint { margin: -0.6em 0 0; font-size: 0.85rem; color: var(--panel-heading); }
   .field-error { font-size: 0.85rem; color: var(--danger-color); }
 
@@ -1087,6 +1105,10 @@
     </label>
     <p class="field-error is-hidden" id="celebration-date-error">Ange datumet som MM-DD, till exempel 04-12.</p>
 
+    <h3>Om</h3>
+    <p class="version-line" id="version-line">Version …</p>
+    <button class="secondary-button" type="button" id="refresh-button">Hämta om allt från servern</button>
+
     <button class="primary-button" type="button" id="settings-close">Klar</button>
   </div>
 </div>
@@ -1334,6 +1356,11 @@ const CLASS_FLASHING = "is-flashing";
 const SWEEP_CYCLE_SECONDS = 60;
 
 const SERVICE_WORKER_PATH = "sw.js";
+const APP_VERSION = "3.0";
+/* Samma sträng som i sw.js — det är protokollet dem emellan */
+const VERSION_REQUEST_MESSAGE = "vilken-cacheversion";
+const VERSION_REPLY_TIMEOUT_MS = 800;
+const NO_SERVICE_WORKER_LABEL = "ingen";
 const ENVIRONMENT_BLOCKED_ERROR = "NotAllowedError";
 const OPAQUE_ORIGIN = "null";
 const WAKE_LOCK_UNSUPPORTED_MESSAGE = "Skärmen kan slockna — webbläsaren saknar stöd för skärmlås.";
@@ -1682,6 +1709,8 @@ const dom = Object.freeze({
   clockFontRow: requireElement("clock-font-row"),
   digitalStyleSelect: requireElement("digital-style-select"),
   celebrationDateError: requireElement("celebration-date-error"),
+  versionLine: requireElement("version-line"),
+  refreshButton: requireElement("refresh-button"),
   themeColorMeta: document.querySelector('meta[name="theme-color"]')
 });
 
@@ -3723,6 +3752,7 @@ settingElements.forEach((element) => {
 
 dom.settingsButton.addEventListener("click", () => {
   writeSettingsToForm();
+  showVersionInformation();
   openOverlay(dom.settingsOverlay);
 });
 dom.settingsClose.addEventListener("click", () => closeOverlay(dom.settingsOverlay));
@@ -3816,7 +3846,65 @@ if (canRegisterServiceWorker()) {
 
 
 /* ==========================================================================
-   19. START
+   19. VERSION OCH OMHÄMTNING
+   ========================================================================== */
+
+/* Frågar den serviceworker som faktiskt är i tjänst. Svarar ingen inom
+   tidsgränsen kör sidan utan serviceworker, eller med en gammal som inte
+   kan svara — båda är svar i sig. */
+function readServiceWorkerCacheVersion() {
+  const controller = navigator.serviceWorker?.controller;
+  if (controller === null || controller === undefined) return Promise.resolve(null);
+  // Saknas kanalen går frågan inte att ställa — det är inget fel, bara okänt
+  if (typeof MessageChannel === "undefined") return Promise.resolve(null);
+
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    const timeoutId = setTimeout(() => resolve(null), VERSION_REPLY_TIMEOUT_MS);
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timeoutId);
+      resolve(event.data?.cacheVersion ?? null);
+    };
+    try {
+      controller.postMessage(VERSION_REQUEST_MESSAGE, [channel.port2]);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      resolve(null);
+    }
+  });
+}
+
+async function showVersionInformation() {
+  const cacheVersion = await readServiceWorkerCacheVersion();
+  /* Filens datum kommer från serverns svar och behöver inte underhållas.
+     Visar det ett gammalt datum är det cachen som är efter, inte servern. */
+  dom.versionLine.textContent =
+    `Version ${APP_VERSION} · Filens datum ${document.lastModified} · ` +
+    `Cache ${cacheVersion ?? NO_SERVICE_WORKER_LABEL}`;
+}
+
+/* Rensar allt och laddar om. Finns för att en gammal serviceworker annars kan
+   fortsätta servera gamla filer långt efter att servern uppdaterats. */
+async function reloadWithFreshFiles() {
+  dom.refreshButton.disabled = true;
+  try {
+    if ("caches" in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+    }
+    const registration = await navigator.serviceWorker?.getRegistration();
+    if (registration !== undefined && registration !== null) await registration.unregister();
+  } catch (error) {
+    console.warn("Cachen kunde inte rensas helt:", error);
+  }
+  window.location.reload();
+}
+
+dom.refreshButton.addEventListener("click", reloadWithFreshFiles);
+
+
+/* ==========================================================================
+   20. START
    ========================================================================== */
 
 markPassedBreaksAsFired(new Date());

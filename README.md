@@ -155,6 +155,22 @@ Båda genereras i webbläsaren, inga ljudfiler behövs.
 
 ---
 
+## Vilken version kör plattan?
+
+Längst ner i Inställningar står tre uppgifter:
+
+- **Version** — appens versionsnummer, höjs för hand i `APP_VERSION`.
+- **Filens datum** — kommer från serverns svar och sköter sig självt. Visar
+  det ett gammalt datum är det en cachad kopia som visas, inte det som
+  ligger på servern.
+- **Cache** — vilken service worker som faktiskt är i tjänst.
+
+Knappen **Hämta om allt från servern** raderar alla cachar, avregistrerar
+service workern och laddar om. Den finns för att en gammal service worker
+annars kan fortsätta servera gamla filer långt efter att servern
+uppdaterats — GitHub låter dessutom webbläsaren cacha `sw.js` i tio
+minuter, så en höjd `CACHE_VERSION` slår inte igenom direkt.
+
 ## Filer
 
 ```
