@@ -2,11 +2,14 @@
    Serviceworker för Klockan
 
    Uppgiften är att väggklockan ska fortsätta fungera när nätet försvinner.
-   Höj CACHE_VERSION varje gång Klockan.html ändras — det är signalen som
-   gör att den gamla cachen städas bort.
+
+   Egna filer levereras ur cachen direkt, men hämtas samtidigt om i bakgrunden
+   så att nästa laddning får den nya versionen. Utan det krävs en manuell
+   höjning av CACHE_VERSION vid varje ändring — ett steg som glöms bort, och
+   då fastnar plattan på gamla filer utan att något syns.
    ========================================================================== */
 
-const CACHE_VERSION = "klockan-v1";
+const CACHE_VERSION = "klockan-v2";
 const APP_START_PAGE = "./index.html";
 
 /* Filer som ska finnas i cachen direkt vid installationen. */
@@ -96,20 +99,40 @@ async function respondWithNetworkFirst(request) {
   }
 }
 
-/* Ikoner, manifest och typsnitt ändras sällan och hämtas därför från cachen
-   när de finns där. Det gör starten snabb och oberoende av nätet. */
+/* Typsnitten ligger på oföränderliga adresser hos Google och behöver aldrig
+   hämtas om när de väl finns i cachen. */
 async function respondWithCacheFirst(request) {
   const cache = await caches.open(CACHE_VERSION);
   const cachedResponse = await cache.match(request);
   if (cachedResponse !== undefined) return cachedResponse;
 
   const response = await fetch(request);
-  /* Typsnitten kommer från en annan domän och svarar ogenomskinligt, utan
-     läsbar status. De går ändå att spara och återanvända. */
+  /* Svar från en annan domän är ogenomskinliga och saknar läsbar status.
+     De går ändå att spara och återanvända. */
   if (response.ok || response.type === OPAQUE_RESPONSE_TYPE) {
     cache.put(request, response.clone());
   }
   return response;
+}
+
+/* Egna filer: leverera ur cachen med en gång, men hämta om i bakgrunden.
+   Sidan startar lika snabbt som förut och nästa laddning har det nya. */
+async function respondWithCachedThenUpdate(request) {
+  const cache = await caches.open(CACHE_VERSION);
+  const cachedResponse = await cache.match(request);
+
+  const networkUpdate = fetch(request)
+    .then((response) => {
+      if (response.ok) cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => undefined);
+
+  if (cachedResponse !== undefined) return cachedResponse;
+
+  const response = await networkUpdate;
+  if (response !== undefined) return response;
+  throw new Error(`Kunde inte hämta ${request.url}`);
 }
 
 self.addEventListener("fetch", (event) => {
@@ -124,7 +147,11 @@ self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(request.url);
   const isOwnFile = requestUrl.origin === self.location.origin;
   const isFontFile = FONT_HOSTS.includes(requestUrl.hostname);
-  if (isOwnFile || isFontFile) {
+  if (isFontFile) {
     event.respondWith(respondWithCacheFirst(request));
+    return;
+  }
+  if (isOwnFile) {
+    event.respondWith(respondWithCachedThenUpdate(request));
   }
 });

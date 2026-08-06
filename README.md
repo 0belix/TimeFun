@@ -104,7 +104,18 @@ Ställ in klockslag för Frukost, Lunch och Fika (standard 09:00 / 12:00 /
 14:30). Nedräkningen räknar alltid till nästa kommande rast, oavsett i
 vilken ordning tiderna matas in.
 
-Ljudsignalen är en kort tvåtonssignal som genereras i webbläsaren. Den
+### Arbetsdagens slut
+
+En egen tid för när det är dags att gå hem (standard 16:30). Den ingår i
+nedräkningen som rasterna, men signalen är längre och kraftigare och hela
+sidan blinkar fyra gånger. Varningen har egen kryssruta och går fram även
+för den som stängt av rastpling.
+
+Blinkningen pulsar 1 Hz — långt under gränsen där blinkande ytor blir en
+risk för ljuskänsliga. Vid reducerad rörelse ersätts pulserna av en lugn
+toning.
+
+Ljudsignalen för raster är en kort tvåtonssignal som genereras i webbläsaren. Den
 spelas även om appen legat i bakgrunden en stund — men tystnar om rasten
 passerade för mer än fem minuter sedan.
 
@@ -121,8 +132,10 @@ gäller även fallbladens vikning och stationsklockans svep.
 
 Klockan skalar ner i två steg. Under 480 px höjd krymper knappar, text och
 marginaler. Under 300 px höjd plockas allt utom tiden bort — namn, prickar
-och rastnedräkning tas bort, och bara kugghjulet blir kvar så att man kan
-ta sig ur läget.
+och rastnedräkning tas bort, och bara kugghjulet och rastnedräkningen blir kvar.
+Sekunderna släpps också: fyra fallbladskort i stället för sex gör varje
+siffra omkring femtio procent större, och det är radens bredd som tar slut
+först — inte höjden.
 
 Vid den storleken finns det bara plats för en klocka, och fönstrets form
 avgör vilken: en bred och låg remsa visar siffrorna, en kvadratisk ruta
@@ -179,5 +192,6 @@ till i stället för att tiga.
 | Svepets fördelning | `@keyframes station-sweep` i CSS |
 | Klackets klang | `CLACK_*`-konstanterna |
 
-Höj `CACHE_VERSION` i `sw.js` när du ändrat `index.html`, annars ligger
-den gamla versionen kvar i cachen på plattan.
+Egna filer levereras ur cachen direkt men hämtas om i bakgrunden, så en
+ändring slår igenom vid nästa laddning utan att `CACHE_VERSION` behöver
+höjas. Höj den ändå om du vill tvinga fram en total omladdning.
