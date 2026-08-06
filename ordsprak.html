@@ -265,6 +265,11 @@ let proverbs = [];
 
 async function loadProverbs() {
   const textsModule = await import(TEXTS_MODULE_PATH);
+  /* Fail fast: en gammal quotes.js utan PROVERBS ger annars ett obegripligt
+     fel längre ner, när listan visar sig vara undefined. */
+  if (!Array.isArray(textsModule.PROVERBS) || textsModule.PROVERBS.length === 0) {
+    throw new Error("quotes.js saknar PROVERBS — filen är troligen en äldre version");
+  }
   proverbs = textsModule.PROVERBS;
 }
 

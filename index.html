@@ -43,6 +43,7 @@
     --flip-card-face: color-mix(in srgb, var(--foreground-color) 15%, var(--background-color));
     --flip-card-seam: color-mix(in srgb, var(--background-color) 70%, #000000);
 
+    --compact-layout: 0;
     --dial-glow: none;
     --dial-font-weight: 500;
     --digital-letter-spacing: 0.06em;
@@ -52,6 +53,9 @@
     --layer-effects: 40;
     --layer-toast: 45;
     --layer-overlay: 50;
+    --layer-flash: 60;
+    --flash-pulse-duration: 1s;
+    --flash-pulse-count: 4;
   }
 
   /* ---------- Tema 1: Funkis — svensk funktionalism, 1950-tal ----------
@@ -605,6 +609,24 @@
   }
   .style-dots .dot.is-active { opacity: 1; background: var(--dial-accent); }
 
+  /* Fyra pulser på fyra sekunder, alltså 1 Hz — långt under gränsen där
+     blinkande ytor blir en risk för ljuskänsliga. */
+  #page-flash {
+    position: fixed;
+    inset: 0;
+    background: var(--accent-color);
+    opacity: 0;
+    pointer-events: none;
+    z-index: var(--layer-flash);
+  }
+  #page-flash.is-flashing {
+    animation: page-flash var(--flash-pulse-duration) ease-in-out var(--flash-pulse-count);
+  }
+  @keyframes page-flash {
+    0%, 100% { opacity: 0; }
+    45% { opacity: 0.75; }
+  }
+
   #style-toast {
     position: fixed;
     top: 50%;
@@ -895,11 +917,24 @@
   }
 
   @media (max-height: 300px), (max-width: 260px) {
+    /* Läses av JavaScript, som då släpper sekunderna. Brytpunkten finns
+       därmed bara här och inte upprepad i koden. */
+    :root { --compact-layout: 1; }
+
     #app { padding: 4px; gap: 3px; }
 
     /* Allt utom tiden bort. Nedräkningen och namnen kan läsas i stort läge. */
-    #names, .style-dots, #break-timer, #wake-warning,
+    #names, .style-dots, #wake-warning,
     #fullscreen-button, #qr-button { display: none !important; }
+
+    #break-timer {
+      top: 2px; left: 2px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      line-height: 1.15;
+    }
+    #break-label { font-size: 8px; letter-spacing: 0.03em; }
+    #break-countdown { font-size: 11px; font-weight: 700; }
 
     /* Kugghjulet blir kvar, annars går det inte att ta sig ur läget */
     #settings-button {
@@ -911,8 +946,12 @@
     #settings-button:hover, #settings-button:focus-visible { opacity: 1; }
 
     #digital-clock,
-    #app.mode-digital #digital-clock { font-size: min(14vw, 40vmin); }
+    #app.mode-digital #digital-clock { font-size: min(15vw, 38vmin); }
     #app.mode-analog #clock-wrap { width: min(96vmin, 96vw); height: min(96vmin, 96vw); }
+
+    /* Smalare kort — varje sparad tiondels em är en större siffra */
+    .flip-sizer { padding: 0 0.1em; min-width: 0.55em; }
+    #digital-clock.style-flip { gap: 0.3vmin; }
 
     /* Panelerna måste ta hela rutan för att gå att använda alls */
     .overlay .panel {
@@ -951,6 +990,8 @@
     .flip-card.is-flipping .flip-leaf,
     .flip-card.is-flipping .flip-leaf::after,
     #clock .hand-second.is-sweeping { animation: none; }
+    /* Varningen ska synas även här, men som en lugn toning i stället för pulser */
+    #page-flash.is-flashing { animation-duration: 2.5s; animation-iteration-count: 1; }
   }
 </style>
 </head>
@@ -979,6 +1020,7 @@
   </div>
 </div>
 
+<div id="page-flash" aria-hidden="true"></div>
 <div id="style-toast" role="status" aria-live="polite"></div>
 
 <button id="fullscreen-button" type="button" title="Helskärm" aria-label="Växla helskärm">⛶</button>
@@ -1033,6 +1075,10 @@
     </div>
     <label class="checkbox-row"><input type="checkbox" id="break-countdown-toggle" /> Visa nedräkning till nästa rast</label>
     <label class="checkbox-row"><input type="checkbox" id="break-chime-toggle" /> Spela ljud när en rast börjar</label>
+
+    <h3>Arbetsdagens slut</h3>
+    <label>Dags att gå hem <input type="time" id="home-time-input" /></label>
+    <label class="checkbox-row"><input type="checkbox" id="home-alert-toggle" /> Varna tydligt och blinka hela sidan</label>
 
     <h3>Övrigt</h3>
     <label class="checkbox-row"><input type="checkbox" id="seasonal-effects-toggle" /> Visa säsongseffekter (snö, konfetti m.m.)</label>
@@ -1232,10 +1278,11 @@ const CELEBRATION_DATE_PATTERN = /^(\d{2})-(\d{2})$/;
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 /* --- Ljudsignal --- */
-const CHIME_FREQUENCIES_HZ = Object.freeze([880, 660]);
-const CHIME_NOTE_SPACING_S = 0.18;
+/* Två klanger ur samma funktion. Hemgången ska höras tvärs över rummet och
+   får därför fler toner, längre mellanrum och mer volym än en rastsignal. */
+const BREAK_CHIME = Object.freeze({ frequencies: [880, 660], spacingSeconds: 0.18, peakGain: 0.30 });
+const HOME_CHIME = Object.freeze({ frequencies: [880, 660, 880, 660, 880], spacingSeconds: 0.28, peakGain: 0.45 });
 const CHIME_SILENT_GAIN = 0.0001;
-const CHIME_PEAK_GAIN = 0.3;
 const CHIME_ATTACK_S = 0.02;
 const CHIME_RELEASE_S = 0.5;
 const CHIME_STOP_PADDING_S = 0.05;
@@ -1276,9 +1323,12 @@ const THEME_ATTRIBUTE = "data-theme";
 const CSS_VARIABLE_BACKGROUND = "--background-color";
 const CSS_VARIABLE_FOREGROUND = "--foreground-color";
 const CSS_VARIABLE_SNOW = "--snow-color";
+const CSS_VARIABLE_COMPACT_LAYOUT = "--compact-layout";
+const COMPACT_LAYOUT_ENABLED = "1";
 const CSS_VARIABLE_DIAL_CENTER = "--dial-center";
 const CSS_VARIABLE_SWEEP_CYCLE = "--sweep-cycle";
 const CLASS_SWEEPING = "is-sweeping";
+const CLASS_FLASHING = "is-flashing";
 /* Stationsklockans sekundvisare varvar på 58,5 s och vilar sedan vid tolv
    tills minutpulsen kommer. Det är den pausen som gör den igenkännlig. */
 const SWEEP_CYCLE_SECONDS = 60;
@@ -1537,6 +1587,8 @@ const DEFAULT_SETTINGS = Object.freeze({
   breakfastTime: "09:00",
   lunchTime: "12:00",
   coffeeBreakTime: "14:30",
+  homeTime: "16:30",
+  alertAtHomeTime: true,
   seasonalEffectsEnabled: true,
   celebrationDate: ""
 });
@@ -1599,6 +1651,7 @@ const dom = Object.freeze({
   secondaryName: requireElement("secondary-name"),
   nameSeparator: requireElement("name-separator"),
   styleToast: requireElement("style-toast"),
+  pageFlash: requireElement("page-flash"),
   breakTimer: requireElement("break-timer"),
   breakLabel: requireElement("break-label"),
   breakCountdown: requireElement("break-countdown"),
@@ -1656,6 +1709,8 @@ const SETTING_BINDINGS = Object.freeze([
   { elementId: "coffee-break-time-input", settingKey: "coffeeBreakTime", property: "value" },
   { elementId: "break-countdown-toggle", settingKey: "showBreakCountdown", property: "checked" },
   { elementId: "break-chime-toggle", settingKey: "playBreakChime", property: "checked" },
+  { elementId: "home-time-input", settingKey: "homeTime", property: "value" },
+  { elementId: "home-alert-toggle", settingKey: "alertAtHomeTime", property: "checked" },
   { elementId: "seasonal-effects-toggle", settingKey: "seasonalEffectsEnabled", property: "checked" },
   { elementId: "celebration-date-input", settingKey: "celebrationDate", property: "value" }
 ]);
@@ -1749,12 +1804,14 @@ function sanitizeSettings(candidate) {
   if (!isValidTimeString(clean.breakfastTime)) clean.breakfastTime = DEFAULT_SETTINGS.breakfastTime;
   if (!isValidTimeString(clean.lunchTime)) clean.lunchTime = DEFAULT_SETTINGS.lunchTime;
   if (!isValidTimeString(clean.coffeeBreakTime)) clean.coffeeBreakTime = DEFAULT_SETTINGS.coffeeBreakTime;
+  if (!isValidTimeString(clean.homeTime)) clean.homeTime = DEFAULT_SETTINGS.homeTime;
 
   clean.useCustomColors = Boolean(clean.useCustomColors);
   clean.useSameFontForClock = Boolean(clean.useSameFontForClock);
   clean.showBreakCountdown = Boolean(clean.showBreakCountdown);
   clean.playBreakChime = Boolean(clean.playBreakChime);
   clean.playFlipClack = Boolean(clean.playFlipClack);
+  clean.alertAtHomeTime = Boolean(clean.alertAtHomeTime);
   clean.seasonalEffectsEnabled = Boolean(clean.seasonalEffectsEnabled);
 
   const celebrationDate = String(clean.celebrationDate ?? "").trim();
@@ -2186,7 +2243,6 @@ function updateAnalogHands(now) {
 
 /* Ett kort per siffra, inte per par. En äkta fallbladstavla har ett blad per
    tecken — och då viker bara den siffra som faktiskt ändras. */
-const DIGITAL_GROUP_COUNT = 3;
 const flipCards = [];
 let lastRenderedTimeText = "";
 
@@ -2265,8 +2321,17 @@ function flipCardTo(cardState, nextText) {
   return true;
 }
 
+function isCompactLayout() {
+  return readCssVariable(CSS_VARIABLE_COMPACT_LAYOUT) === COMPACT_LAYOUT_ENABLED;
+}
+
+/* I ett litet fönster tar bredden slut långt före höjden. Utan sekunderna
+   blir det fyra kort i stället för sex, och varje siffra kan bli halvvägs
+   större i stället för att klippas vid kanten. */
 function getTimeSegments(date) {
-  return [padTwoDigits(date.getHours()), padTwoDigits(date.getMinutes()), padTwoDigits(date.getSeconds())];
+  const segments = [padTwoDigits(date.getHours()), padTwoDigits(date.getMinutes())];
+  if (!isCompactLayout()) segments.push(padTwoDigits(date.getSeconds()));
+  return segments;
 }
 
 function buildDigitalClockStructure() {
@@ -2276,14 +2341,15 @@ function buildDigitalClockStructure() {
   if (settings.digitalStyleId !== "flip") return;
 
   // Startvärdet sätts till nuvarande tid så att korten inte viker sig i onödan
-  getTimeSegments(new Date()).forEach((groupText, groupIndex) => {
+  const segments = getTimeSegments(new Date());
+  segments.forEach((groupText, groupIndex) => {
     [...groupText].forEach((digit) => {
       const cardState = createFlipCard(digit);
       flipCards.push(cardState);
       dom.digitalClock.appendChild(cardState.card);
     });
 
-    if (groupIndex < DIGITAL_GROUP_COUNT - 1) {
+    if (groupIndex < segments.length - 1) {
       const colonElement = document.createElement("span");
       colonElement.className = "flip-colon";
       colonElement.setAttribute("aria-hidden", "true");
@@ -2349,7 +2415,8 @@ function getBreakEvents(now) {
   return [
     { label: "Frukost", targetTime: parseTimeToday(settings.breakfastTime, now) },
     { label: "Lunch", targetTime: parseTimeToday(settings.lunchTime, now) },
-    { label: "Fika", targetTime: parseTimeToday(settings.coffeeBreakTime, now) }
+    { label: "Fika", targetTime: parseTimeToday(settings.coffeeBreakTime, now) },
+    { label: "Hemgång", targetTime: parseTimeToday(settings.homeTime, now), isEndOfDay: true }
   ].sort((first, second) => first.targetTime - second.targetTime);
 }
 
@@ -2396,19 +2463,19 @@ function ensureAudioContext() {
 // Webbläsare tillåter ljud först efter en användarinteraktion
 document.addEventListener("pointerdown", ensureAudioContext, { once: true });
 
-function playChime() {
+function playChime(chimeProfile) {
   if (audioContext === null) return;
 
   const startTime = audioContext.currentTime;
-  CHIME_FREQUENCIES_HZ.forEach((frequencyHz, noteIndex) => {
-    const noteStart = startTime + noteIndex * CHIME_NOTE_SPACING_S;
+  chimeProfile.frequencies.forEach((frequencyHz, noteIndex) => {
+    const noteStart = startTime + noteIndex * chimeProfile.spacingSeconds;
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
     oscillator.type = "sine";
     oscillator.frequency.value = frequencyHz;
     gainNode.gain.setValueAtTime(CHIME_SILENT_GAIN, noteStart);
-    gainNode.gain.exponentialRampToValueAtTime(CHIME_PEAK_GAIN, noteStart + CHIME_ATTACK_S);
+    gainNode.gain.exponentialRampToValueAtTime(chimeProfile.peakGain, noteStart + CHIME_ATTACK_S);
     gainNode.gain.exponentialRampToValueAtTime(CHIME_SILENT_GAIN, noteStart + CHIME_RELEASE_S);
 
     oscillator.connect(gainNode).connect(audioContext.destination);
@@ -2416,6 +2483,15 @@ function playChime() {
     oscillator.stop(noteStart + CHIME_RELEASE_S + CHIME_STOP_PADDING_S);
   });
 }
+
+function flashPage() {
+  // Layouten måste läsas om, annars startar animationen inte om nästa dag
+  dom.pageFlash.classList.remove(CLASS_FLASHING);
+  void dom.pageFlash.offsetWidth;
+  dom.pageFlash.classList.add(CLASS_FLASHING);
+}
+
+dom.pageFlash.addEventListener("animationend", () => dom.pageFlash.classList.remove(CLASS_FLASHING));
 
 /* Bruset byggs en gång och återanvänds — att skapa en ny buffert varje sekund
    vore rent slöseri på en klocka som går dygnet runt. */
@@ -2491,7 +2567,17 @@ function checkBreakChime(now) {
     if (firedChimes.get(event.label) === todayText) return;
 
     firedChimes.set(event.label, todayText);
-    if (settings.playBreakChime && elapsedMs <= BREAK_CHIME_MAX_LATE_MS) playChime();
+    if (elapsedMs > BREAK_CHIME_MAX_LATE_MS) return;
+
+    /* Hemgången har egen signal och blinkning, oberoende av rastljudet —
+       den ska gå fram även för den som stängt av pling vid fika. */
+    if (event.isEndOfDay) {
+      if (!settings.alertAtHomeTime) return;
+      playChime(HOME_CHIME);
+      flashPage();
+      return;
+    }
+    if (settings.playBreakChime) playChime(BREAK_CHIME);
   });
 }
 
@@ -2551,9 +2637,21 @@ function resizeEffectsCanvas() {
   effectsContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 }
 
+let wasCompactLayout = null;
+
+/* Korsar fönstret brytpunkten måste korten byggas om — antalet ändras. */
+function handleViewportResize() {
+  resizeEffectsCanvas();
+  const isCompact = isCompactLayout();
+  if (isCompact === wasCompactLayout) return;
+  wasCompactLayout = isCompact;
+  buildDigitalClockStructure();
+  renderCurrentTime();
+}
+
 window.addEventListener("resize", () => {
   if (resizeTimeoutId !== null) clearTimeout(resizeTimeoutId);
-  resizeTimeoutId = setTimeout(resizeEffectsCanvas, RESIZE_DEBOUNCE_MS);
+  resizeTimeoutId = setTimeout(handleViewportResize, RESIZE_DEBOUNCE_MS);
 });
 resizeEffectsCanvas();
 
