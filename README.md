@@ -33,14 +33,18 @@ Dina två senaste förbättringar finns kvar och är oförändrade i sak:
 
 ### Nytt
 
-- **Sex teman** i stället för fyra urtavlestilar. Varje tema styr palett,
-  typsnitt, urtavlans uppbyggnad och panelernas utseende: Funkis, Deco,
-  Station, Bakelit, Neon, Minimal. Din "Lyxig" lever vidare som Deco.
+- **Tio teman.** Dina fyra urtavlor finns kvar oförändrade, med sina namn och
+  sin palett. Utöver dem sex nya som styr hela utseendet — palett, typsnitt,
+  urtavlans uppbyggnad och panelerna: Funkis, Deco, Station, Bakelit,
+  Neonrör och Hårstreck. De två sistnämnda hette först Neon och Minimal, men
+  döptes om så att dina namn fick behålla sina.
 - **Vikanimation** på fallbladen — fyra lager per kort, med studs mot stoppet.
 - **QR-koden är tillbaka, utan internetberoende.** Kodaren är inbyggd
   (byte-läge, nivå M) och verifierad mot ISO-tabellerna och en riktig
   avkodare. Det var nätberoendet som gjorde den opålitlig, inte funktionen.
-- **`quotes.js`** — citaten på ett enda ställe, delade med `ordsprak.html`.
+- **`quotes.js`** — två skilda samlingar på ett enda ställe: `QUOTES` för
+  påskägget och `PROVERBS` för QR-sidan. De ska inte överlappa — den som
+  skannar koden på väggen ska få något annat än den som hittat påskägget.
 - **Robust serviceworker.** Din `cache.addAll()` avbryter hela
   installationen om en enda fil saknas, och då försvinner offline-läget
   utan felmeddelande. Nu hämtas filerna var för sig.
@@ -76,14 +80,23 @@ under visar var i karusellen du är. Går även att välja i Inställningar.
 |---|---|
 | **Funkis** | Alla siffror, minutring, batongvisare med motvikt |
 | **Deco** | Solstrålar, siffror vid 12/3/6/9, rombvisare, vapenskölden |
-| **Station** | Inga siffror, röd sekundvisare med skiva |
+| **Station** | Inga siffror, röd sekundvisare som sveper och vilar vid tolv |
 | **Bakelit** | Glödande radioskala, kondenserat typsnitt |
-| **Neon** | Glöd, hårfina visare |
-| **Minimal** | Fyra streck och inget mer |
+| **Neonrör** | Cyan och magenta, hårfina visare |
+| **Hårstreck** | Fyra streck och inget mer |
+| **Klassisk** | Originalet — alla siffror, raka visare |
+| **Minimalistisk** | Originalet — bara timstreck, inga siffror |
+| **Neon** | Originalet — glöd i den färg du valt |
+| **Lyxig** | Originalet — antikva, tunna visare, vapenskölden |
+
+De fyra sista är de ursprungliga urtavlorna, med sin gamla mörkblå palett.
+Den som uppdaterar från en tidigare version behåller exakt den tavla hen
+redan valt. Vill du styra färgerna själv finns "Använd egna färger" kvar —
+då följer hela tavlan dina val, precis som förut.
 
 Tryck **5 gånger** (korta tryck, inte svep) på klockan för att öppna
 påskägget med skärmtangentbordet. Skriv "Stockholm" så visas ett slumpat
-citat. Fungerar på både den analoga och den digitala klockan.
+litterärt citat. Fungerar på både den analoga och den digitala klockan.
 
 ## Raster
 
@@ -101,7 +114,31 @@ passerade för mer än fem minuter sedan.
 - **Konfetti** på nyårsafton och nyårsdagen.
 - **Extra festdag** — eget datum i formatet `MM-DD`.
 
-Stängs automatiskt av om systemet är inställt på reducerad rörelse.
+Stängs automatiskt av om systemet är inställt på reducerad rörelse. Det
+gäller även fallbladens vikning och stationsklockans svep.
+
+## Små fönster
+
+Klockan skalar ner i två steg. Under 480 px höjd krymper knappar, text och
+marginaler. Under 300 px höjd plockas allt utom tiden bort — namn, prickar
+och rastnedräkning tas bort, och bara kugghjulet blir kvar så att man kan
+ta sig ur läget.
+
+Vid den storleken finns det bara plats för en klocka, och fönstrets form
+avgör vilken: en bred och låg remsa visar siffrorna, en kvadratisk ruta
+urtavlan. Panelerna täcker hela rutan för att gå att använda alls.
+
+Ungefär 5x3 cm är den minsta storlek där det fortfarande ser avsiktligt ut.
+
+## Ljud
+
+Två oberoende ljud, båda avstängda från början:
+
+- **Rastsignal** — kort tvåtonssignal när en rast börjar.
+- **Fallbladens klack** — ett anslag i samma ögonblick som bladet slår i
+  stoppet. Ett klack per sekund, inte ett per siffra.
+
+Båda genereras i webbläsaren, inga ljudfiler behövs.
 
 ---
 
@@ -110,7 +147,7 @@ Stängs automatiskt av om systemet är inställt på reducerad rörelse.
 ```
 index.html                  – appen
 quotes.js                   – citaten, delas med ordsprak.html
-ordsprak.html               – sidan QR-koden pekar på
+ordsprak.html               – svenska ordspråk, sidan QR-koden pekar på
 logo.png                    – vapenskölden på Deco-tavlan
 manifest.json               – gör appen installerbar
 sw.js                       – service worker, cache för offline
@@ -131,13 +168,16 @@ till i stället för att tiga.
 
 | Vad | Var |
 |---|---|
-| Citaten | `quotes.js` |
+| Citaten i påskägget | `QUOTES` i `quotes.js` |
+| Ordspråken på QR-sidan | `PROVERBS` i `quotes.js` |
 | Teman | `THEMES` i `index.html`, plus `:root[data-theme="..."]` i CSS |
 | Vapenskölden | byt ut `logo.png`, justera `DIAL_CREST_WIDTH` / `DIAL_CREST_HEIGHT` |
 | Rasttider | `DEFAULT_SETTINGS.breakfastTime` m.fl. |
 | Säsongsdatum | `getSeasonalEffect()` |
 | Ljudsignalen | `playChime()` och `CHIME_*`-konstanterna |
-| Vikningens fart | `--flip-leaf-duration` i CSS |
+| Vikningens fart | `--flip-leaf-duration` i CSS — klacket följer med automatiskt |
+| Svepets fördelning | `@keyframes station-sweep` i CSS |
+| Klackets klang | `CLACK_*`-konstanterna |
 
 Höj `CACHE_VERSION` i `sw.js` när du ändrat `index.html`, annars ligger
 den gamla versionen kvar i cachen på plattan.
