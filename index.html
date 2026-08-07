@@ -818,15 +818,39 @@
     cursor: pointer;
   }
 
+  /* Landskap är det vanliga läget, så panelen lägger sektionerna i kolumner
+     i stället för en enda lång remsa. Varje sektion håller ihop internt — då
+     kan inga kryssrutor hamna under fel rubrik. */
   #settings-panel {
-    padding: 3.4vmin;
-    width: min(92vw, 440px);
-    max-height: 88vh;
+    padding: 3vmin;
+    width: min(94vw, 960px);
+    max-height: 90vh;
     overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 2vmin 3vmin;
+    align-items: start;
+  }
+  #settings-panel > h2,
+  #settings-panel > .panel-footer { grid-column: 1 / -1; }
+  .settings-section-wide { grid-column: 1 / -1; }
+  .settings-section {
     display: flex;
     flex-direction: column;
-    gap: 1.9vmin;
+    gap: 1.5vmin;
+    min-width: 0;
   }
+  .panel-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5vmin;
+    border-top: 1px solid var(--panel-border);
+    padding-top: 2vmin;
+  }
+  .footer-buttons { display: flex; gap: 1.5vmin; flex-wrap: wrap; }
+  .footer-buttons .primary-button { padding: 12px 28px; }
   #settings-panel h2 {
     margin: 0 0 0.2em;
     font-size: 1.3rem;
@@ -835,7 +859,7 @@
     text-transform: uppercase;
   }
   #settings-panel h3 {
-    margin: 0.4em 0 -0.6em;
+    margin: 0 0 -0.4em;
     font-size: 0.8rem;
     font-weight: 500;
     color: var(--panel-heading);
@@ -883,9 +907,9 @@
   }
   .checkbox-row { flex-direction: row !important; align-items: center; gap: 1em !important; }
   .checkbox-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent-color); }
-  #settings-panel .primary-button { margin-top: 0.4em; padding: 12px 20px; font-size: 1rem; }
+
   .version-line {
-    margin: -0.4em 0 0;
+    margin: 0;
     font-size: 0.8rem;
     color: var(--panel-heading);
     font-variant-numeric: tabular-nums;
@@ -1043,7 +1067,7 @@
     #settings-button:hover, #settings-button:focus-visible { opacity: 1; }
 
     #digital-clock,
-    #app.mode-digital #digital-clock { font-size: min(13vw, 46vmin); }
+    #app.mode-digital #digital-clock { font-size: min(17vw, 52vmin); }
     #app.mode-analog #clock-wrap { width: min(96vmin, 96vw); height: min(96vmin, 96vw); }
 
     /* Smalare kort — varje sparad tiondels em är en större siffra */
@@ -1138,69 +1162,84 @@
   <div class="panel" id="settings-panel">
     <h2 id="settings-title">Inställningar</h2>
 
-    <h3>Tema</h3>
-    <label>Tema <select id="theme-select"></select></label>
-    <p class="field-hint">Tips: svep på urtavlan för att byta tema, och på digitalklockan för att byta stil.</p>
-    <label class="checkbox-row"><input type="checkbox" id="custom-colors-toggle" /> Använd egna färger i stället för temats</label>
-    <div class="color-row is-hidden" id="custom-colors-row">
-      <label>Bakgrundsfärg <input type="color" id="background-color-input" /></label>
-      <label>Förgrundsfärg <input type="color" id="foreground-color-input" /></label>
+    <section class="settings-section">
+      <h3>Tema</h3>
+      <label>Tema <select id="theme-select"></select></label>
+      <p class="field-hint">Tips: svep på urtavlan för att byta tema, och på digitalklockan för att byta stil.</p>
+      <label class="checkbox-row"><input type="checkbox" id="custom-colors-toggle" /> Använd egna färger i stället för temats</label>
+      <div class="color-row is-hidden" id="custom-colors-row">
+        <label>Bakgrundsfärg <input type="color" id="background-color-input" /></label>
+        <label>Förgrundsfärg <input type="color" id="foreground-color-input" /></label>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h3>Namn</h3>
+      <label>Namn 1 <input type="text" id="primary-name-input" maxlength="24" placeholder="t.ex. Anna" /></label>
+      <label>Namn 2 (valfritt) <input type="text" id="secondary-name-input" maxlength="24" placeholder="t.ex. Erik" /></label>
+      <label>Typsnitt för namnen <select id="name-font-select"></select></label>
+      <label>Monogram (Deco-tavlan, tomt ger vapenskölden) <input type="text" id="monogram-input" maxlength="3" placeholder="t.ex. RB" /></label>
+    </section>
+
+    <section class="settings-section">
+      <h3>Visning</h3>
+      <label>Visa
+        <select id="display-mode-select">
+          <option value="both">Analog och digital</option>
+          <option value="analog">Bara analog</option>
+          <option value="digital">Bara digital</option>
+        </select>
+      </label>
+      <label>Digitalklockans stil <select id="digital-style-select"></select></label>
+      <label id="flip-motion-row">Flippens rörelse <select id="flip-motion-select"></select></label>
+      <label class="checkbox-row"><input type="checkbox" id="flip-clack-toggle" /> Ljud när flipbladen slår i</label>
+      <label class="checkbox-row"><input type="checkbox" id="same-font-toggle" /> Samma typsnitt för namn och digitalklocka</label>
+      <label id="clock-font-row">Typsnitt för digitalklockan <select id="clock-font-select"></select></label>
+      <button class="secondary-button is-hidden" type="button" id="float-button">Öppna i litet fönster överst</button>
+    </section>
+
+    <section class="settings-section settings-section-wide">
+      <h3>Tider</h3>
+      <div class="time-grid">
+        <label>Start <input type="time" id="start-time-input" /></label>
+        <label>Frukost <input type="time" id="breakfast-time-input" /></label>
+        <label>Lunch <input type="time" id="lunch-time-input" /></label>
+        <label>Fika <input type="time" id="coffee-break-time-input" /></label>
+        <label>Hemgång <input type="time" id="home-time-input" /></label>
+      </div>
+      <label class="checkbox-row"><input type="checkbox" id="break-countdown-toggle" /> Visa nedräkning till nästa rast</label>
+    </section>
+
+    <section class="settings-section">
+      <h3>Varning vid rast</h3>
+      <label class="checkbox-row"><input type="checkbox" id="break-sound-toggle" /> Ljud</label>
+      <label class="checkbox-row"><input type="checkbox" id="break-flash-toggle" /> Blinka hela sidan</label>
+      <label class="checkbox-row"><input type="checkbox" id="break-marquee-toggle" /> Rullande text över skärmen</label>
+    </section>
+
+    <section class="settings-section">
+      <h3>Varning vid dagens start och slut</h3>
+      <label class="checkbox-row"><input type="checkbox" id="workday-sound-toggle" /> Ljud (längre och kraftigare)</label>
+      <label class="checkbox-row"><input type="checkbox" id="workday-flash-toggle" /> Blinka hela sidan</label>
+      <label class="checkbox-row"><input type="checkbox" id="workday-marquee-toggle" /> Rullande text över skärmen</label>
+    </section>
+
+    <section class="settings-section">
+      <h3>Övrigt</h3>
+      <label class="checkbox-row"><input type="checkbox" id="seasonal-effects-toggle" /> Visa säsongseffekter (snö, konfetti m.m.)</label>
+      <label>Extra fest-dag (valfritt, format MM-DD)
+        <input type="text" id="celebration-date-input" placeholder="t.ex. 04-12" maxlength="5" inputmode="numeric" />
+      </label>
+      <p class="field-error is-hidden" id="celebration-date-error">Ange datumet som MM-DD, till exempel 04-12.</p>
+    </section>
+
+    <div class="panel-footer">
+      <p class="version-line" id="version-line">Version …</p>
+      <div class="footer-buttons">
+        <button class="secondary-button" type="button" id="refresh-button">Hämta om allt från servern</button>
+        <button class="primary-button" type="button" id="settings-close">Klar</button>
+      </div>
     </div>
-
-    <h3>Namn</h3>
-    <label>Namn 1 <input type="text" id="primary-name-input" maxlength="24" placeholder="t.ex. Anna" /></label>
-    <label>Namn 2 (valfritt) <input type="text" id="secondary-name-input" maxlength="24" placeholder="t.ex. Erik" /></label>
-    <label>Typsnitt för namnen <select id="name-font-select"></select></label>
-    <label>Monogram (Deco-tavlan, tomt ger vapenskölden) <input type="text" id="monogram-input" maxlength="3" placeholder="t.ex. RB" /></label>
-
-    <h3>Visning</h3>
-    <label>Visa
-      <select id="display-mode-select">
-        <option value="both">Analog och digital</option>
-        <option value="analog">Bara analog</option>
-        <option value="digital">Bara digital</option>
-      </select>
-    </label>
-    <label>Digitalklockans stil <select id="digital-style-select"></select></label>
-    <label id="flip-motion-row">Flippens rörelse <select id="flip-motion-select"></select></label>
-    <button class="secondary-button is-hidden" type="button" id="float-button">Öppna i litet fönster överst</button>
-    <label class="checkbox-row"><input type="checkbox" id="flip-clack-toggle" /> Ljud när flipbladen slår i</label>
-    <label class="checkbox-row">
-      <input type="checkbox" id="same-font-toggle" /> Samma typsnitt för namn och digitalklocka
-    </label>
-    <label id="clock-font-row">Typsnitt för digitalklockan <select id="clock-font-select"></select></label>
-
-    <h3>Tider</h3>
-    <div class="time-grid">
-      <label>Start <input type="time" id="start-time-input" /></label>
-      <label>Frukost <input type="time" id="breakfast-time-input" /></label>
-      <label>Lunch <input type="time" id="lunch-time-input" /></label>
-      <label>Fika <input type="time" id="coffee-break-time-input" /></label>
-      <label>Hemgång <input type="time" id="home-time-input" /></label>
-    </div>
-    <label class="checkbox-row"><input type="checkbox" id="break-countdown-toggle" /> Visa nedräkning till nästa rast</label>
-    <p class="field-hint">Varning vid rast</p>
-    <label class="checkbox-row"><input type="checkbox" id="break-sound-toggle" /> Ljud</label>
-    <label class="checkbox-row"><input type="checkbox" id="break-flash-toggle" /> Blinka hela sidan</label>
-    <label class="checkbox-row"><input type="checkbox" id="break-marquee-toggle" /> Rullande text över skärmen</label>
-
-    <p class="field-hint">Varning vid arbetsdagens start och slut</p>
-    <label class="checkbox-row"><input type="checkbox" id="workday-sound-toggle" /> Ljud (längre och kraftigare)</label>
-    <label class="checkbox-row"><input type="checkbox" id="workday-flash-toggle" /> Blinka hela sidan</label>
-    <label class="checkbox-row"><input type="checkbox" id="workday-marquee-toggle" /> Rullande text över skärmen</label>
-
-    <h3>Övrigt</h3>
-    <label class="checkbox-row"><input type="checkbox" id="seasonal-effects-toggle" /> Visa säsongseffekter (snö, konfetti m.m.)</label>
-    <label>Extra fest-dag (valfritt, format MM-DD)
-      <input type="text" id="celebration-date-input" placeholder="t.ex. 04-12" maxlength="5" inputmode="numeric" />
-    </label>
-    <p class="field-error is-hidden" id="celebration-date-error">Ange datumet som MM-DD, till exempel 04-12.</p>
-
-    <h3>Om</h3>
-    <p class="version-line" id="version-line">Version …</p>
-    <button class="secondary-button" type="button" id="refresh-button">Hämta om allt från servern</button>
-
-    <button class="primary-button" type="button" id="settings-close">Klar</button>
   </div>
 </div>
 
@@ -1440,6 +1479,7 @@ const CLASS_SWEEPING = "is-sweeping";
 const CLASS_FLASHING = "is-flashing";
 /* Bandet rullar ungefär tre varv och försvinner sedan av sig självt */
 const MARQUEE_ALERT_DURATION_MS = 28000;
+const DIGITAL_FIT_MIN_SCALE = 0.35;
 /* Kortets bredd mäts alltid mot samma tecken. Låter man den visade siffran
    styra blir ettan smalare än nollan i typsnitt utan tabellsiffror. */
 const FLIP_WIDTH_REFERENCE_DIGIT = "0";
@@ -1448,7 +1488,7 @@ const FLIP_WIDTH_REFERENCE_DIGIT = "0";
 const SWEEP_CYCLE_SECONDS = 60;
 
 const SERVICE_WORKER_PATH = "sw.js";
-const APP_VERSION = "3.3";
+const APP_VERSION = "3.4";
 /* Samma sträng som i sw.js — det är protokollet dem emellan */
 const VERSION_REQUEST_MESSAGE = "vilken-cacheversion";
 const VERSION_REPLY_TIMEOUT_MS = 800;
@@ -2169,6 +2209,7 @@ function applySettings() {
   renderStyleDots();
   refreshSeasonalEffect();
   renderCurrentTime();
+  fitDigitalClock();
 }
 
 
@@ -2645,6 +2686,23 @@ function renderBinaryClock(digits) {
   });
 }
 
+/* Sista skyddet mot att siffrorna hamnar utanför kanten. Bredden beror på
+   typsnitt, stil, antal kort och fönsterstorlek — det går inte att räkna fram
+   i förväg, så den mäts efteråt och krymps bara om den faktiskt inte får plats. */
+function fitDigitalClock() {
+  dom.digitalClock.style.transform = "";
+  if (settings.displayMode === "analog") return;
+
+  const appStyle = getComputedStyle(dom.app);
+  const availableWidth = dom.app.clientWidth
+    - Number.parseFloat(appStyle.paddingLeft) - Number.parseFloat(appStyle.paddingRight);
+  const contentWidth = dom.digitalClock.scrollWidth;
+  if (contentWidth === 0 || contentWidth <= availableWidth) return;
+
+  const scale = Math.max(availableWidth / contentWidth, DIGITAL_FIT_MIN_SCALE);
+  dom.digitalClock.style.transform = `scale(${scale})`;
+}
+
 function renderDigitalClock(now) {
   if (settings.displayMode === "analog") return;
 
@@ -2674,7 +2732,12 @@ function renderDigitalClock(now) {
     return;
   }
   if (settings.digitalStyleId === "words") {
-    dom.digitalClock.textContent = formatTimeAsWords(now);
+    const phrase = formatTimeAsWords(now);
+    if (dom.digitalClock.textContent !== phrase) {
+      dom.digitalClock.textContent = phrase;
+      // Frasens längd varierar kraftigt, så bredden måste mätas om vid byte
+      fitDigitalClock();
+    }
     return;
   }
   dom.digitalClock.textContent = timeText;
@@ -2956,10 +3019,19 @@ function resizeEffectsCanvas() {
   effectsContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 }
 
+function handleViewportResize() {
+  resizeEffectsCanvas();
+  fitDigitalClock();
+}
+
 window.addEventListener("resize", () => {
   if (resizeTimeoutId !== null) clearTimeout(resizeTimeoutId);
-  resizeTimeoutId = setTimeout(resizeEffectsCanvas, RESIZE_DEBOUNCE_MS);
+  resizeTimeoutId = setTimeout(handleViewportResize, RESIZE_DEBOUNCE_MS);
 });
+
+/* Typsnitten hämtas från nätet och kan komma efter första ritningen. Då ändras
+   bredderna, och mätningen måste göras om. */
+document.fonts?.ready.then(fitDigitalClock).catch(() => {});
 resizeEffectsCanvas();
 
 function randomInRange(minimum, range) {

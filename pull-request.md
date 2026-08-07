@@ -57,13 +57,23 @@ kommer allt tillbaka.
 
 ---
 
+### Bred inställningspanel
+
+Panelen är omgjord till ett rutnät som lägger sektionerna i kolumner när det
+finns bredd — landskap är trots allt det vanliga läget. Varje sektion håller
+ihop internt, så inga kryssrutor kan hamna under fel rubrik.
+
+---
+
 ## Rättat
 
 - **Alla siffror i flip-klockan är lika breda.** Kortets bredd mättes förut mot
   siffran som visades, så en etta blev smalare än en nolla i typsnitt utan
   tabellsiffror. Bredden mäts nu alltid mot samma tecken.
-- **Sekunderna syns igen i små fönster.** Korten gjordes smalare i stället för
-  att sekunderna släpptes. Sex kort ryms ner till ungefär 5x3 cm.
+- **Sekunderna syns igen i små fönster, och hamnar inte utanför kanten.**
+  Storleken räknades förut fram med en formel, men bredden beror på typsnitt,
+  stil och antal kort och går inte att förutse. Den mäts nu efteråt och krymps
+  bara om den faktiskt inte får plats.
 - **Alla fem tider ligger i samma rutnät** — start, frukost, lunch, fika och
   hemgång — som lägger om sig efter panelens bredd.
 - **Svenskt datumformat** i versionsraden, `2026-08-07 06:40` i stället för
