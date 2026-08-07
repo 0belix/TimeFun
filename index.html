@@ -50,6 +50,8 @@
     --name-transform: none;
 
     --layer-effects: 40;
+    --layer-marquee: 35;
+    --marquee-duration: 16s;
     --layer-toast: 45;
     --layer-overlay: 50;
     --layer-flash: 60;
@@ -557,6 +559,46 @@
 
   .flip-colon { opacity: 0.65; padding: 0 0.3vmin; }
 
+  /* ---------- Väckarklocka ----------
+     De släckta segmenten ligger kvar svagt bakom siffrorna. Det är dem man
+     ser på en riktig LCD, och utan dem ser den bara ut som text. */
+  #digital-clock.style-led {
+    position: relative;
+    font-family: 'VT323', 'Courier New', monospace;
+    letter-spacing: 0.04em;
+  }
+  #digital-clock.style-led .led-ghost {
+    position: absolute;
+    inset: 0;
+    opacity: 0.13;
+    pointer-events: none;
+  }
+  #digital-clock.style-led .led-value { position: relative; }
+
+  /* ---------- Ord ---------- */
+  #digital-clock.style-words {
+    display: block;
+    text-align: center;
+    max-width: 88vw;
+    line-height: 1.15;
+    font-size: clamp(1.6rem, 7vmin, 4.2rem);
+    letter-spacing: 0.02em;
+    text-wrap: balance;
+  }
+
+  /* ---------- Binär ---------- */
+  #digital-clock.style-binary { gap: 1.6vmin; align-items: flex-end; }
+  .binary-column { display: flex; flex-direction: column; gap: 1.1vmin; }
+  .binary-dot {
+    width: clamp(9px, 2.6vmin, 22px);
+    height: clamp(9px, 2.6vmin, 22px);
+    border-radius: 50%;
+    border: 1px solid var(--dial-muted);
+    background: none;
+    transition: background 0.15s ease;
+  }
+  .binary-dot.is-on { background: var(--dial-accent); border-color: var(--dial-accent); }
+
   /* ---------- Analog klocka ---------- */
   #clock-wrap {
     width: min(60vmin, 82vw);
@@ -689,6 +731,34 @@
   #qr-button { bottom: 1.6vmin; right: 1.6vmin; }
 
   /* ---------- Rastnedräkning ---------- */
+  /* Rullande band. Bredden på texten kan variera från sekund till sekund, så
+     animationen utgår från elementets egen bredd i stället för en fast punkt. */
+  #break-marquee {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: var(--layer-marquee);
+    padding: 0.6vmin 0;
+  }
+  #marquee-text {
+    display: inline-block;
+    padding-left: 100%;
+    color: var(--foreground-color);
+    font-size: clamp(1.4rem, 7vmin, 4rem);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    animation: marquee-scroll var(--marquee-duration) linear infinite;
+  }
+  @keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
+  }
+
   #break-timer {
     position: fixed;
     top: 1.6vmin;
@@ -1009,7 +1079,8 @@
     html, body, #style-toast, .style-dots .dot { transition: none; }
     .flip-card.is-flipping .flip-leaf,
     .flip-card.is-flipping .flip-leaf::after,
-    #clock .hand-second.is-sweeping { animation: none; }
+    #clock .hand-second.is-sweeping,
+    #marquee-text { animation: none; }
     /* Varningen ska synas även här, men som en lugn toning i stället för pulser */
     #page-flash.is-flashing { animation-duration: 2.5s; animation-iteration-count: 1; }
   }
@@ -1048,6 +1119,8 @@
 <button id="qr-button" type="button" title="Visdomsord" aria-label="Visa QR-kod för visdomsord">🔳</button>
 <div id="wake-warning" role="status"></div>
 
+<div id="break-marquee" class="is-hidden" aria-hidden="true"><span id="marquee-text"></span></div>
+
 <div id="break-timer" class="is-hidden" aria-label="Nedräkning till nästa rast">
   <div id="break-label"></div>
   <div id="break-countdown"></div>
@@ -1081,6 +1154,7 @@
       </select>
     </label>
     <label>Digitalklockans stil <select id="digital-style-select"></select></label>
+    <button class="secondary-button is-hidden" type="button" id="float-button">Öppna i litet fönster överst</button>
     <label class="checkbox-row"><input type="checkbox" id="flip-clack-toggle" /> Ljud när flipbladen slår i</label>
     <label class="checkbox-row">
       <input type="checkbox" id="same-font-toggle" /> Samma typsnitt för namn och digitalklocka
@@ -1095,7 +1169,7 @@
       <label>Fika <input type="time" id="coffee-break-time-input" /></label>
       <label>Hemgång <input type="time" id="home-time-input" /></label>
     </div>
-    <label class="checkbox-row"><input type="checkbox" id="break-countdown-toggle" /> Visa nedräkning till nästa rast</label>
+    <label>Visa nedräkningen som <select id="countdown-mode-select"></select></label>
     <p class="field-hint">Varning vid rast</p>
     <label class="checkbox-row"><input type="checkbox" id="break-sound-toggle" /> Ljud</label>
     <label class="checkbox-row"><input type="checkbox" id="break-flash-toggle" /> Blinka hela sidan</label>
@@ -1363,12 +1437,15 @@ const FLIP_WIDTH_REFERENCE_DIGIT = "0";
 const SWEEP_CYCLE_SECONDS = 60;
 
 const SERVICE_WORKER_PATH = "sw.js";
-const APP_VERSION = "3.1";
+const APP_VERSION = "3.2";
 /* Samma sträng som i sw.js — det är protokollet dem emellan */
 const VERSION_REQUEST_MESSAGE = "vilken-cacheversion";
 const VERSION_REPLY_TIMEOUT_MS = 800;
 const NO_SERVICE_WORKER_LABEL = "ingen";
 const SWEDISH_LOCALE = "sv-SE";
+const PIP_WINDOW_WIDTH_PX = 420;
+const PIP_WINDOW_HEIGHT_PX = 200;
+const PIP_UNSUPPORTED_MESSAGE = "Kräver Chrome eller Edge";
 const ENVIRONMENT_BLOCKED_ERROR = "NotAllowedError";
 const OPAQUE_ORIGIN = "null";
 const WAKE_LOCK_UNSUPPORTED_MESSAGE = "Skärmen kan slockna — webbläsaren saknar stöd för skärmlås.";
@@ -1597,7 +1674,35 @@ const FONT_OPTIONS = Object.freeze([
 
 const DIGITAL_STYLES = Object.freeze([
   { id: "plain", label: "Vanlig" },
-  { id: "flip", label: "Flip-klocka" }
+  { id: "flip", label: "Flip-klocka" },
+  { id: "led", label: "Väckarklocka" },
+  { id: "words", label: "Ord" },
+  { id: "binary", label: "Binär" }
+]);
+
+/* Väckarklockan ritar en svag helsiffrig bakgrund bakom tiden — det är de
+   släckta segmenten som gör att en LCD ser ut som en LCD. */
+const LED_GHOST_TEXT = "88:88:88";
+
+const HOUR_WORDS = Object.freeze([
+  "tolv", "ett", "två", "tre", "fyra", "fem", "sex", "sju", "åtta", "nio", "tio", "elva"
+]);
+/* Ett steg per fem minuter, så som klockslag faktiskt sägs på svenska */
+const MINUTE_PHRASES = Object.freeze([
+  "{current}", "fem över {current}", "tio över {current}", "kvart över {current}",
+  "tjugo över {current}", "fem i halv {next}", "halv {next}", "fem över halv {next}",
+  "tjugo i {next}", "kvart i {next}", "tio i {next}", "fem i {next}"
+]);
+const MINUTES_PER_PHRASE_STEP = 5;
+const PHRASE_STEPS_PER_HOUR = 12;
+
+/* Binärklockan visar varje siffra som en lodrät kolumn med värdena 8, 4, 2, 1 */
+const BINARY_ROW_VALUES = Object.freeze([8, 4, 2, 1]);
+
+const COUNTDOWN_MODES = Object.freeze([
+  { id: "hidden", label: "Dölj" },
+  { id: "box", label: "Liten ruta uppe till vänster" },
+  { id: "marquee", label: "Stor rullande text" }
 ]);
 
 const DISPLAY_MODES = Object.freeze(["both", "analog", "digital"]);
@@ -1616,7 +1721,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   displayMode: "both",
   digitalStyleId: "plain",
   monogramText: "",
-  showBreakCountdown: false,
+  countdownMode: "box",
   breakAlertSound: false,
   breakAlertFlash: false,
   workdayAlertSound: true,
@@ -1643,7 +1748,7 @@ const LEGACY_KEY_MAP = Object.freeze({
   clockStyle: "clockStyleId",
   digitalStyle: "digitalStyleId",
   monogram: "monogramText",
-  showMealTimer: "showBreakCountdown",
+  showMealTimer: "showBreakCountdownLegacy",
   mealSound: "breakAlertSound",
   frukostTime: "breakfastTime",
   fikaTime: "coffeeBreakTime",
@@ -1691,6 +1796,8 @@ const dom = Object.freeze({
   styleToast: requireElement("style-toast"),
   pageFlash: requireElement("page-flash"),
   breakTimer: requireElement("break-timer"),
+  breakMarquee: requireElement("break-marquee"),
+  marqueeText: requireElement("marquee-text"),
   breakLabel: requireElement("break-label"),
   breakCountdown: requireElement("break-countdown"),
   effectsCanvas: requireElement("effects-canvas"),
@@ -1719,9 +1826,11 @@ const dom = Object.freeze({
   clockFontSelect: requireElement("clock-font-select"),
   clockFontRow: requireElement("clock-font-row"),
   digitalStyleSelect: requireElement("digital-style-select"),
+  countdownModeSelect: requireElement("countdown-mode-select"),
   celebrationDateError: requireElement("celebration-date-error"),
   versionLine: requireElement("version-line"),
   refreshButton: requireElement("refresh-button"),
+  floatButton: requireElement("float-button"),
   themeColorMeta: document.querySelector('meta[name="theme-color"]')
 });
 
@@ -1747,7 +1856,7 @@ const SETTING_BINDINGS = Object.freeze([
   { elementId: "breakfast-time-input", settingKey: "breakfastTime", property: "value" },
   { elementId: "lunch-time-input", settingKey: "lunchTime", property: "value" },
   { elementId: "coffee-break-time-input", settingKey: "coffeeBreakTime", property: "value" },
-  { elementId: "break-countdown-toggle", settingKey: "showBreakCountdown", property: "checked" },
+  { elementId: "countdown-mode-select", settingKey: "countdownMode", property: "value" },
   { elementId: "break-sound-toggle", settingKey: "breakAlertSound", property: "checked" },
   { elementId: "break-flash-toggle", settingKey: "breakAlertFlash", property: "checked" },
   { elementId: "start-time-input", settingKey: "startTime", property: "value" },
@@ -1807,8 +1916,16 @@ function migrateVersionThreeAlerts(candidate) {
     migrated.workdayAlertFlash = Boolean(migrated.alertAtHomeTime);
   }
 
+  /* Nedräkningen var förut av eller på. Nu finns tre lägen. */
+  if (migrated.countdownMode === undefined) {
+    const wasVisible = migrated.showBreakCountdown ?? migrated.showBreakCountdownLegacy;
+    migrated.countdownMode = wasVisible === false ? "hidden" : "box";
+  }
+
   delete migrated.playBreakChime;
   delete migrated.alertAtHomeTime;
+  delete migrated.showBreakCountdown;
+  delete migrated.showBreakCountdownLegacy;
   return migrated;
 }
 
@@ -1872,7 +1989,7 @@ function sanitizeSettings(candidate) {
 
   clean.useCustomColors = Boolean(clean.useCustomColors);
   clean.useSameFontForClock = Boolean(clean.useSameFontForClock);
-  clean.showBreakCountdown = Boolean(clean.showBreakCountdown);
+  clean.countdownMode = pickValidId(clean.countdownMode, COUNTDOWN_MODES, DEFAULT_SETTINGS.countdownMode);
   clean.playFlipClack = Boolean(clean.playFlipClack);
   clean.breakAlertSound = Boolean(clean.breakAlertSound);
   clean.breakAlertFlash = Boolean(clean.breakAlertFlash);
@@ -1949,12 +2066,24 @@ function applyNames() {
   dom.nameSeparator.classList.toggle(CLASS_HIDDEN, !hasBothNames);
 }
 
+/* Flyttas klockan till ett eget fönster har det egna dokumentet en egen
+   rot-nod, och temat måste sättas på båda. */
+function getStyledRoots() {
+  const roots = [document.documentElement];
+  if (floatingWindow !== null) roots.push(floatingWindow.document.documentElement);
+  return roots;
+}
+
 function applyPalette() {
-  const rootStyle = document.documentElement.style;
+  getStyledRoots().forEach(applyPaletteToRoot);
+}
+
+function applyPaletteToRoot(rootElement) {
+  const rootStyle = rootElement.style;
   // CSS behöver samma mått som urtavlan ritas med — JS är enda källan
   rootStyle.setProperty(CSS_VARIABLE_DIAL_CENTER, `${DIAL_CENTER}px`);
   rootStyle.setProperty(CSS_VARIABLE_SWEEP_CYCLE, `${SWEEP_CYCLE_SECONDS}s`);
-  document.documentElement.setAttribute(THEME_ATTRIBUTE, settings.themeId);
+  rootElement.setAttribute(THEME_ATTRIBUTE, settings.themeId);
 
   /* Inline-variabler vinner över temablocket i CSS, vilket är precis vad
      "egna färger" ska göra. Utan valet tas de bort helt. */
@@ -1989,7 +2118,8 @@ function applySettings() {
   applyNames();
   applyTypography();
 
-  dom.breakTimer.classList.toggle(CLASS_HIDDEN, !settings.showBreakCountdown);
+  dom.breakTimer.classList.toggle(CLASS_HIDDEN, settings.countdownMode !== "box");
+  dom.breakMarquee.classList.toggle(CLASS_HIDDEN, settings.countdownMode !== "marquee");
 
   DISPLAY_MODES.forEach((mode) => dom.app.classList.remove(`mode-${mode}`));
   dom.app.classList.add(`mode-${settings.displayMode}`);
@@ -2310,6 +2440,10 @@ function updateAnalogHands(now) {
 /* Ett kort per siffra, inte per par. En äkta fallbladstavla har ett blad per
    tecken — och då viker bara den siffra som faktiskt ändras. */
 const flipCards = [];
+const binaryDots = [];
+const BINARY_COLUMN_COUNT = 6;
+const CLASS_DOT_ON = "is-on";
+let ledValueElement = null;
 let lastRenderedTimeText = "";
 
 function padTwoDigits(value) {
@@ -2390,21 +2524,13 @@ function getTimeSegments(date) {
   return [padTwoDigits(date.getHours()), padTwoDigits(date.getMinutes()), padTwoDigits(date.getSeconds())];
 }
 
-function buildDigitalClockStructure() {
-  dom.digitalClock.replaceChildren();
-  flipCards.length = 0;
-  lastRenderedTimeText = "";
-  if (settings.digitalStyleId !== "flip") return;
-
-  // Startvärdet sätts till nuvarande tid så att korten inte viker sig i onödan
-  const segments = getTimeSegments(new Date());
+function buildFlipStructure(segments) {
   segments.forEach((groupText, groupIndex) => {
     [...groupText].forEach((digit) => {
       const cardState = createFlipCard(digit);
       flipCards.push(cardState);
       dom.digitalClock.appendChild(cardState.card);
     });
-
     if (groupIndex < segments.length - 1) {
       const colonElement = document.createElement("span");
       colonElement.className = "flip-colon";
@@ -2412,6 +2538,71 @@ function buildDigitalClockStructure() {
       colonElement.textContent = ":";
       dom.digitalClock.appendChild(colonElement);
     }
+  });
+}
+
+function buildLedStructure() {
+  const ghostElement = document.createElement("span");
+  ghostElement.className = "led-ghost";
+  ghostElement.setAttribute("aria-hidden", "true");
+  ghostElement.textContent = LED_GHOST_TEXT;
+
+  const valueElement = document.createElement("span");
+  valueElement.className = "led-value";
+  dom.digitalClock.append(ghostElement, valueElement);
+  ledValueElement = valueElement;
+}
+
+function buildBinaryStructure() {
+  binaryDots.length = 0;
+  for (let columnIndex = 0; columnIndex < BINARY_COLUMN_COUNT; columnIndex += 1) {
+    const columnElement = document.createElement("span");
+    columnElement.className = "binary-column";
+    const columnDots = BINARY_ROW_VALUES.map(() => {
+      const dotElement = document.createElement("span");
+      dotElement.className = "binary-dot";
+      columnElement.appendChild(dotElement);
+      return dotElement;
+    });
+    binaryDots.push(columnDots);
+    dom.digitalClock.appendChild(columnElement);
+  }
+}
+
+function buildDigitalClockStructure() {
+  dom.digitalClock.replaceChildren();
+  flipCards.length = 0;
+  ledValueElement = null;
+  lastRenderedTimeText = "";
+
+  const segments = getTimeSegments(new Date());
+  if (settings.digitalStyleId === "flip") buildFlipStructure(segments);
+  else if (settings.digitalStyleId === "led") buildLedStructure();
+  else if (settings.digitalStyleId === "binary") buildBinaryStructure();
+}
+
+/* Klockslag som de sägs: "kvart över tre", "fem i halv nio". Avrundas till
+   närmaste femminutersteg, precis som när man svarar någon som frågar. */
+function formatTimeAsWords(date) {
+  const minuteFraction = date.getMinutes() + date.getSeconds() / SECONDS_PER_MINUTE;
+  const step = Math.round(minuteFraction / MINUTES_PER_PHRASE_STEP);
+  const hourOffset = step >= PHRASE_STEPS_PER_HOUR ? 1 : 0;
+  const phrase = MINUTE_PHRASES[step % PHRASE_STEPS_PER_HOUR];
+
+  const currentHour = (date.getHours() + hourOffset) % HOURS_ON_DIAL;
+  const nextHour = (currentHour + 1) % HOURS_ON_DIAL;
+  return phrase
+    .replace("{current}", HOUR_WORDS[currentHour])
+    .replace("{next}", HOUR_WORDS[nextHour]);
+}
+
+function renderBinaryClock(digits) {
+  digits.forEach((digit, columnIndex) => {
+    const value = Number(digit);
+    BINARY_ROW_VALUES.forEach((rowValue, rowIndex) => {
+      const isOn = (value & rowValue) !== 0;
+      binaryDots[columnIndex][rowIndex].classList.toggle(CLASS_DOT_ON, isOn);
+    });
   });
 }
 
@@ -2433,6 +2624,18 @@ function renderDigitalClock(now) {
       .map((digit, digitIndex) => flipCardTo(flipCards[digitIndex], digit))
       .some(Boolean);
     if (anyCardFlipped && settings.playFlipClack) playFlipClack();
+    return;
+  }
+  if (settings.digitalStyleId === "led") {
+    ledValueElement.textContent = timeText;
+    return;
+  }
+  if (settings.digitalStyleId === "binary") {
+    renderBinaryClock([...segments.join("")]);
+    return;
+  }
+  if (settings.digitalStyleId === "words") {
+    dom.digitalClock.textContent = formatTimeAsWords(now);
     return;
   }
   dom.digitalClock.textContent = timeText;
@@ -2490,16 +2693,20 @@ function getBreakState(now) {
 }
 
 function updateBreakCountdown(now) {
-  if (!settings.showBreakCountdown) return;
+  if (settings.countdownMode === "hidden") return;
 
   const state = getBreakState(now);
   if (state.hasUpcomingToday) {
     dom.breakLabel.textContent = `Till ${state.label}`;
     dom.breakCountdown.textContent = formatDuration(state.targetTime - now);
+    /* Texten byts under tiden bandet rullar. Att skriva textContent startar
+       inte om animationen, så rörelsen fortsätter obruten. */
+    dom.marqueeText.textContent = `Till ${state.label} ${formatDuration(state.targetTime - now)}`;
     return;
   }
   dom.breakLabel.textContent = `Nästa: ${state.label}`;
   dom.breakCountdown.textContent = `imorgon ${formatHoursMinutes(state.targetTime)}`;
+  dom.marqueeText.textContent = `Nästa: ${state.label} imorgon ${formatHoursMinutes(state.targetTime)}`;
 }
 
 let audioContext = null;
@@ -3701,6 +3908,7 @@ buildSelectOptions(dom.themeSelect, THEMES, false);
 buildSelectOptions(dom.nameFontSelect, FONT_OPTIONS, true);
 buildSelectOptions(dom.clockFontSelect, FONT_OPTIONS, true);
 buildSelectOptions(dom.digitalStyleSelect, DIGITAL_STYLES, false);
+buildSelectOptions(dom.countdownModeSelect, COUNTDOWN_MODES, false);
 
 function updateConditionalRows() {
   dom.clockFontRow.classList.toggle(CLASS_HIDDEN, settings.useSameFontForClock);
@@ -3859,7 +4067,68 @@ if (canRegisterServiceWorker()) {
 
 
 /* ==========================================================================
-   19. VERSION OCH OMHÄMTNING
+   19. EGET FÖNSTER ÖVERST
+   ========================================================================== */
+
+let floatingWindow = null;
+/* Noderna flyttas, inte kopieras — då följer alla händelselyssnare med och
+   klockan fortsätter gå i samma instans. */
+const FLOATING_NODE_IDS = Object.freeze(["app", "break-marquee", "break-timer", "page-flash"]);
+
+function copyStylesInto(targetDocument) {
+  document.querySelectorAll('style, link[rel="stylesheet"]').forEach((styleNode) => {
+    targetDocument.head.appendChild(styleNode.cloneNode(true));
+  });
+}
+
+function returnFloatingNodes() {
+  FLOATING_NODE_IDS.forEach((nodeId) => {
+    const node = floatingWindow?.document.getElementById(nodeId);
+    if (node !== null && node !== undefined) document.body.appendChild(node);
+  });
+  floatingWindow = null;
+  applySettings();
+}
+
+async function openFloatingWindow() {
+  if (!("documentPictureInPicture" in window)) {
+    showStyleToast(PIP_UNSUPPORTED_MESSAGE);
+    return;
+  }
+  if (floatingWindow !== null) {
+    floatingWindow.focus();
+    return;
+  }
+
+  try {
+    floatingWindow = await window.documentPictureInPicture.requestWindow({
+      width: PIP_WINDOW_WIDTH_PX,
+      height: PIP_WINDOW_HEIGHT_PX
+    });
+    copyStylesInto(floatingWindow.document);
+    FLOATING_NODE_IDS.forEach((nodeId) => {
+      const node = document.getElementById(nodeId);
+      if (node !== null) floatingWindow.document.body.appendChild(node);
+    });
+    floatingWindow.addEventListener("pagehide", returnFloatingNodes);
+    applySettings();
+    closeOverlay(dom.settingsOverlay);
+  } catch (error) {
+    floatingWindow = null;
+    console.warn("Kunde inte öppna eget fönster:", error);
+    showStyleToast(PIP_UNSUPPORTED_MESSAGE);
+  }
+}
+
+// Knappen visas bara i webbläsare som klarar det
+if ("documentPictureInPicture" in window) {
+  dom.floatButton.classList.remove(CLASS_HIDDEN);
+  dom.floatButton.addEventListener("click", openFloatingWindow);
+}
+
+
+/* ==========================================================================
+   20. VERSION OCH OMHÄMTNING
    ========================================================================== */
 
 /* Frågar den serviceworker som faktiskt är i tjänst. Svarar ingen inom
@@ -3925,7 +4194,7 @@ dom.refreshButton.addEventListener("click", reloadWithFreshFiles);
 
 
 /* ==========================================================================
-   20. START
+   21. START
    ========================================================================== */
 
 markPassedBreaksAsFired(new Date());
