@@ -541,6 +541,15 @@
     animation: flip-leaf-roll-in var(--flip-leaf-duration) ease-out
                var(--flip-leaf-duration) both;
   }
+  @keyframes flip-leaf-fall {
+    from { transform: rotateX(0deg); }
+    to { transform: rotateX(-90deg); }
+  }
+  @keyframes flip-leaf-land {
+    from { transform: rotateX(90deg); }
+    to { transform: rotateX(0deg); }
+  }
+
   @keyframes flip-leaf-roll-out {
     from { transform: translateY(0); opacity: 1; }
     to { transform: translateY(-100%); opacity: 0; }
@@ -1488,7 +1497,7 @@ const FLIP_WIDTH_REFERENCE_DIGIT = "0";
 const SWEEP_CYCLE_SECONDS = 60;
 
 const SERVICE_WORKER_PATH = "sw.js";
-const APP_VERSION = "3.4";
+const APP_VERSION = "3.5";
 /* Samma sträng som i sw.js — det är protokollet dem emellan */
 const VERSION_REQUEST_MESSAGE = "vilken-cacheversion";
 const VERSION_REPLY_TIMEOUT_MS = 800;
