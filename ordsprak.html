@@ -217,7 +217,15 @@ const PROVERBS_UNAVAILABLE_MESSAGE = "Ordspråken kunde inte hämtas just nu.";
 const OPENING_QUOTATION_MARK = "\u201D";
 const CLOSING_QUOTATION_MARK = "\u201D";
 const PROVERB_SOURCE_LABEL = "Svenskt ordspråk";
-const PAGE_VERSION = "3.0";
+const PAGE_VERSION = "3.1";
+const SWEDISH_LOCALE = "sv-SE";
+
+/* document.lastModified kommer i webbläsarens egen ordning, ofta amerikansk */
+function formatSwedishDateTime(rawValue) {
+  const date = new Date(rawValue);
+  if (Number.isNaN(date.getTime())) return rawValue;
+  return date.toLocaleString(SWEDISH_LOCALE, { dateStyle: "short", timeStyle: "short" });
+}
 
 const TEXTS_MODULE_PATH = "./quotes.js";
 
@@ -364,7 +372,7 @@ async function loadAndShowFirstProverb() {
 /* Filens datum kommer från serverns svar. Visar det något gammalt är det en
    cachad kopia som visas, inte det som ligger på servern. */
 requireElement("version-line").textContent =
-  `Version ${PAGE_VERSION} · ${document.lastModified}`;
+  `Version ${PAGE_VERSION} · ${formatSwedishDateTime(document.lastModified)}`;
 
 applyTheme(readThemeFromQuery());
 loadAndShowFirstProverb();
