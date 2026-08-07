@@ -51,7 +51,7 @@
 
     --layer-effects: 40;
     --layer-marquee: 35;
-    --marquee-duration: 16s;
+    --marquee-duration: 9s;
     --layer-toast: 45;
     --layer-overlay: 50;
     --layer-flash: 60;
@@ -517,43 +517,50 @@
   }
 
   .flip-card.is-flipping .flip-leaf { visibility: visible; }
-  .flip-card.is-flipping .flip-leaf-top {
+
+  /* --- Fallblad: bladet viker ned kring mittaxeln och studsar mot stoppet --- */
+  .flip-motion-fall .flip-card.is-flipping .flip-leaf-top {
     animation: flip-leaf-fall var(--flip-leaf-duration) cubic-bezier(0.55, 0.02, 0.85, 0.35) both;
   }
-  .flip-card.is-flipping .flip-leaf-top::after {
+  .flip-motion-fall .flip-card.is-flipping .flip-leaf-top::after {
     animation: flip-shade-deepen var(--flip-leaf-duration) linear both;
   }
-  /* Landar först när det övre bladet fallit klart, och studsar till mot
-     stoppet — det är den studsen som är själva klicket. */
-  .flip-card.is-flipping .flip-leaf-bottom {
+  .flip-motion-fall .flip-card.is-flipping .flip-leaf-bottom {
     animation: flip-leaf-land var(--flip-leaf-duration) cubic-bezier(0.2, 1.55, 0.5, 1)
                var(--flip-leaf-duration) both;
   }
-  .flip-card.is-flipping .flip-leaf-bottom::after {
+  .flip-motion-fall .flip-card.is-flipping .flip-leaf-bottom::after {
     animation: flip-shade-lift var(--flip-leaf-duration) linear var(--flip-leaf-duration) both;
   }
 
-  /* Sveper med en CSS-animation i stället för en requestAnimationFrame-loop.
-     Webbläsaren kan då driva rörelsen utan att väcka JavaScript 60 ggr/s —
-     avgörande på en platta som sitter på väggen dygnet runt. */
-  #clock .hand-second.is-sweeping {
-    animation: station-sweep var(--sweep-cycle) linear infinite;
+  /* --- Rulle: siffrorna glider uppåt som på en vägmätare --- */
+  .flip-motion-roll .flip-card.is-flipping .flip-leaf-top {
+    animation: flip-leaf-roll-out var(--flip-leaf-duration) ease-in both;
   }
-  @keyframes station-sweep {
-    0% { transform: translate(var(--dial-center), var(--dial-center)) rotate(0deg); }
-    /* 58,5 s av 60 = 97,5 % — resten är vilan vid tolv */
-    97.5% { transform: translate(var(--dial-center), var(--dial-center)) rotate(360deg); }
-    100% { transform: translate(var(--dial-center), var(--dial-center)) rotate(360deg); }
+  .flip-motion-roll .flip-card.is-flipping .flip-leaf-bottom {
+    animation: flip-leaf-roll-in var(--flip-leaf-duration) ease-out
+               var(--flip-leaf-duration) both;
+  }
+  @keyframes flip-leaf-roll-out {
+    from { transform: translateY(0); opacity: 1; }
+    to { transform: translateY(-100%); opacity: 0; }
+  }
+  @keyframes flip-leaf-roll-in {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 
-  @keyframes flip-leaf-fall {
-    from { transform: rotateX(0deg); }
-    to   { transform: rotateX(-90deg); }
+  /* --- Toning: mjukast av de tre, utan mekanik --- */
+  .flip-motion-fade .flip-card.is-flipping .flip-leaf-top {
+    animation: flip-leaf-fade-out var(--flip-leaf-duration) ease-out both;
   }
-  @keyframes flip-leaf-land {
-    from { transform: rotateX(90deg); }
-    to   { transform: rotateX(0deg); }
+  .flip-motion-fade .flip-card.is-flipping .flip-leaf-bottom {
+    animation: flip-leaf-fade-in var(--flip-leaf-duration) ease-in
+               var(--flip-leaf-duration) both;
   }
+  @keyframes flip-leaf-fade-out { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes flip-leaf-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
   @keyframes flip-shade-deepen { from { opacity: 0; } to { opacity: 0.45; } }
   @keyframes flip-shade-lift { from { opacity: 0.45; } to { opacity: 0; } }
 
@@ -1079,6 +1086,7 @@
     html, body, #style-toast, .style-dots .dot { transition: none; }
     .flip-card.is-flipping .flip-leaf,
     .flip-card.is-flipping .flip-leaf::after,
+    #marquee-text,
     #clock .hand-second.is-sweeping,
     #marquee-text { animation: none; }
     /* Varningen ska synas även här, men som en lugn toning i stället för pulser */
@@ -1154,6 +1162,7 @@
       </select>
     </label>
     <label>Digitalklockans stil <select id="digital-style-select"></select></label>
+    <label id="flip-motion-row">Flippens rörelse <select id="flip-motion-select"></select></label>
     <button class="secondary-button is-hidden" type="button" id="float-button">Öppna i litet fönster överst</button>
     <label class="checkbox-row"><input type="checkbox" id="flip-clack-toggle" /> Ljud när flipbladen slår i</label>
     <label class="checkbox-row">
@@ -1169,14 +1178,16 @@
       <label>Fika <input type="time" id="coffee-break-time-input" /></label>
       <label>Hemgång <input type="time" id="home-time-input" /></label>
     </div>
-    <label>Visa nedräkningen som <select id="countdown-mode-select"></select></label>
+    <label class="checkbox-row"><input type="checkbox" id="break-countdown-toggle" /> Visa nedräkning till nästa rast</label>
     <p class="field-hint">Varning vid rast</p>
     <label class="checkbox-row"><input type="checkbox" id="break-sound-toggle" /> Ljud</label>
     <label class="checkbox-row"><input type="checkbox" id="break-flash-toggle" /> Blinka hela sidan</label>
+    <label class="checkbox-row"><input type="checkbox" id="break-marquee-toggle" /> Rullande text över skärmen</label>
 
     <p class="field-hint">Varning vid arbetsdagens start och slut</p>
     <label class="checkbox-row"><input type="checkbox" id="workday-sound-toggle" /> Ljud (längre och kraftigare)</label>
     <label class="checkbox-row"><input type="checkbox" id="workday-flash-toggle" /> Blinka hela sidan</label>
+    <label class="checkbox-row"><input type="checkbox" id="workday-marquee-toggle" /> Rullande text över skärmen</label>
 
     <h3>Övrigt</h3>
     <label class="checkbox-row"><input type="checkbox" id="seasonal-effects-toggle" /> Visa säsongseffekter (snö, konfetti m.m.)</label>
@@ -1235,7 +1246,7 @@
 
 /* --- Lagring --- */
 const STORAGE_KEY = "klocka-settings";
-const SETTINGS_VERSION = 4;
+const SETTINGS_VERSION = 5;
 const INITIAL_SETTINGS_VERSION = 1;
 
 /* --- Tid --- */
@@ -1419,8 +1430,6 @@ const CLASS_HIDDEN = "is-hidden";
 const CLASS_ACTIVE = "is-active";
 const CLASS_VISIBLE = "is-visible";
 const CLASS_FLIPPING = "is-flipping";
-/* Måste stämma med @keyframes-namnet — det är signalen om att bladet landat */
-const FLIP_LEAF_LAND_ANIMATION = "flip-leaf-land";
 const THEME_ATTRIBUTE = "data-theme";
 const CSS_VARIABLE_BACKGROUND = "--background-color";
 const CSS_VARIABLE_FOREGROUND = "--foreground-color";
@@ -1429,6 +1438,8 @@ const CSS_VARIABLE_DIAL_CENTER = "--dial-center";
 const CSS_VARIABLE_SWEEP_CYCLE = "--sweep-cycle";
 const CLASS_SWEEPING = "is-sweeping";
 const CLASS_FLASHING = "is-flashing";
+/* Bandet rullar ungefär tre varv och försvinner sedan av sig självt */
+const MARQUEE_ALERT_DURATION_MS = 28000;
 /* Kortets bredd mäts alltid mot samma tecken. Låter man den visade siffran
    styra blir ettan smalare än nollan i typsnitt utan tabellsiffror. */
 const FLIP_WIDTH_REFERENCE_DIGIT = "0";
@@ -1437,7 +1448,7 @@ const FLIP_WIDTH_REFERENCE_DIGIT = "0";
 const SWEEP_CYCLE_SECONDS = 60;
 
 const SERVICE_WORKER_PATH = "sw.js";
-const APP_VERSION = "3.2";
+const APP_VERSION = "3.3";
 /* Samma sträng som i sw.js — det är protokollet dem emellan */
 const VERSION_REQUEST_MESSAGE = "vilken-cacheversion";
 const VERSION_REPLY_TIMEOUT_MS = 800;
@@ -1699,10 +1710,12 @@ const PHRASE_STEPS_PER_HOUR = 12;
 /* Binärklockan visar varje siffra som en lodrät kolumn med värdena 8, 4, 2, 1 */
 const BINARY_ROW_VALUES = Object.freeze([8, 4, 2, 1]);
 
-const COUNTDOWN_MODES = Object.freeze([
-  { id: "hidden", label: "Dölj" },
-  { id: "box", label: "Liten ruta uppe till vänster" },
-  { id: "marquee", label: "Stor rullande text" }
+/* Rörelsen sitter helt i CSS. Lagren är desamma för alla tre, så bytet av
+   stil rör bara vilken klass som ligger på klockan. */
+const FLIP_MOTIONS = Object.freeze([
+  { id: "fall", label: "Fallblad (klassisk)" },
+  { id: "roll", label: "Rulle" },
+  { id: "fade", label: "Toning" }
 ]);
 
 const DISPLAY_MODES = Object.freeze(["both", "analog", "digital"]);
@@ -1720,8 +1733,11 @@ const DEFAULT_SETTINGS = Object.freeze({
   useSameFontForClock: false,
   displayMode: "both",
   digitalStyleId: "plain",
+  flipMotionId: "fall",
   monogramText: "",
-  countdownMode: "box",
+  showBreakCountdown: true,
+  breakAlertMarquee: false,
+  workdayAlertMarquee: true,
   breakAlertSound: false,
   breakAlertFlash: false,
   workdayAlertSound: true,
@@ -1826,7 +1842,8 @@ const dom = Object.freeze({
   clockFontSelect: requireElement("clock-font-select"),
   clockFontRow: requireElement("clock-font-row"),
   digitalStyleSelect: requireElement("digital-style-select"),
-  countdownModeSelect: requireElement("countdown-mode-select"),
+  flipMotionSelect: requireElement("flip-motion-select"),
+  flipMotionRow: requireElement("flip-motion-row"),
   celebrationDateError: requireElement("celebration-date-error"),
   versionLine: requireElement("version-line"),
   refreshButton: requireElement("refresh-button"),
@@ -1850,19 +1867,22 @@ const SETTING_BINDINGS = Object.freeze([
   { elementId: "monogram-input", settingKey: "monogramText", property: "value" },
   { elementId: "display-mode-select", settingKey: "displayMode", property: "value" },
   { elementId: "digital-style-select", settingKey: "digitalStyleId", property: "value" },
+  { elementId: "flip-motion-select", settingKey: "flipMotionId", property: "value" },
   { elementId: "flip-clack-toggle", settingKey: "playFlipClack", property: "checked" },
   { elementId: "same-font-toggle", settingKey: "useSameFontForClock", property: "checked" },
   { elementId: "clock-font-select", settingKey: "clockFontId", property: "value" },
   { elementId: "breakfast-time-input", settingKey: "breakfastTime", property: "value" },
   { elementId: "lunch-time-input", settingKey: "lunchTime", property: "value" },
   { elementId: "coffee-break-time-input", settingKey: "coffeeBreakTime", property: "value" },
-  { elementId: "countdown-mode-select", settingKey: "countdownMode", property: "value" },
+  { elementId: "break-countdown-toggle", settingKey: "showBreakCountdown", property: "checked" },
   { elementId: "break-sound-toggle", settingKey: "breakAlertSound", property: "checked" },
   { elementId: "break-flash-toggle", settingKey: "breakAlertFlash", property: "checked" },
+  { elementId: "break-marquee-toggle", settingKey: "breakAlertMarquee", property: "checked" },
   { elementId: "start-time-input", settingKey: "startTime", property: "value" },
   { elementId: "home-time-input", settingKey: "homeTime", property: "value" },
   { elementId: "workday-sound-toggle", settingKey: "workdayAlertSound", property: "checked" },
   { elementId: "workday-flash-toggle", settingKey: "workdayAlertFlash", property: "checked" },
+  { elementId: "workday-marquee-toggle", settingKey: "workdayAlertMarquee", property: "checked" },
   { elementId: "seasonal-effects-toggle", settingKey: "seasonalEffectsEnabled", property: "checked" },
   { elementId: "celebration-date-input", settingKey: "celebrationDate", property: "value" }
 ]);
@@ -1929,6 +1949,17 @@ function migrateVersionThreeAlerts(candidate) {
   return migrated;
 }
 
+/* Version 4 hade tre lägen för nedräkningen, där ett av dem var det rullande
+   bandet. Bandet är numera en varning i stället, så läget blir av eller på. */
+function migrateVersionFourCountdown(candidate) {
+  const migrated = { ...candidate };
+  if (migrated.countdownMode !== undefined && migrated.showBreakCountdown === undefined) {
+    migrated.showBreakCountdown = migrated.countdownMode !== "hidden";
+  }
+  delete migrated.countdownMode;
+  return migrated;
+}
+
 function migrateSettings(storedSettings) {
   // Version 1 saknade versionsfält helt, därför standardvärdet
   const storedVersion = Number(storedSettings.version) || INITIAL_SETTINGS_VERSION;
@@ -1937,6 +1968,7 @@ function migrateSettings(storedSettings) {
   if (storedVersion < 2) migrated = migrateVersionOneKeys(migrated);
   if (storedVersion < 3) migrated = migrateVersionTwoStyles(migrated);
   if (storedVersion < 4) migrated = migrateVersionThreeAlerts(migrated);
+  if (storedVersion < 5) migrated = migrateVersionFourCountdown(migrated);
 
   migrated.version = SETTINGS_VERSION;
   return migrated;
@@ -1969,6 +2001,7 @@ function sanitizeSettings(candidate) {
 
   clean.themeId = pickValidId(clean.themeId, THEMES, DEFAULT_SETTINGS.themeId);
   clean.digitalStyleId = pickValidId(clean.digitalStyleId, DIGITAL_STYLES, DEFAULT_SETTINGS.digitalStyleId);
+  clean.flipMotionId = pickValidId(clean.flipMotionId, FLIP_MOTIONS, DEFAULT_SETTINGS.flipMotionId);
   clean.nameFontId = pickValidId(clean.nameFontId, FONT_OPTIONS, DEFAULT_SETTINGS.nameFontId);
   clean.clockFontId = pickValidId(clean.clockFontId, FONT_OPTIONS, DEFAULT_SETTINGS.clockFontId);
 
@@ -1989,12 +2022,14 @@ function sanitizeSettings(candidate) {
 
   clean.useCustomColors = Boolean(clean.useCustomColors);
   clean.useSameFontForClock = Boolean(clean.useSameFontForClock);
-  clean.countdownMode = pickValidId(clean.countdownMode, COUNTDOWN_MODES, DEFAULT_SETTINGS.countdownMode);
+  clean.showBreakCountdown = Boolean(clean.showBreakCountdown);
   clean.playFlipClack = Boolean(clean.playFlipClack);
   clean.breakAlertSound = Boolean(clean.breakAlertSound);
   clean.breakAlertFlash = Boolean(clean.breakAlertFlash);
   clean.workdayAlertSound = Boolean(clean.workdayAlertSound);
   clean.workdayAlertFlash = Boolean(clean.workdayAlertFlash);
+  clean.breakAlertMarquee = Boolean(clean.breakAlertMarquee);
+  clean.workdayAlertMarquee = Boolean(clean.workdayAlertMarquee);
   clean.seasonalEffectsEnabled = Boolean(clean.seasonalEffectsEnabled);
 
   const celebrationDate = String(clean.celebrationDate ?? "").trim();
@@ -2118,14 +2153,16 @@ function applySettings() {
   applyNames();
   applyTypography();
 
-  dom.breakTimer.classList.toggle(CLASS_HIDDEN, settings.countdownMode !== "box");
-  dom.breakMarquee.classList.toggle(CLASS_HIDDEN, settings.countdownMode !== "marquee");
+  dom.breakTimer.classList.toggle(CLASS_HIDDEN, !settings.showBreakCountdown);
 
   DISPLAY_MODES.forEach((mode) => dom.app.classList.remove(`mode-${mode}`));
   dom.app.classList.add(`mode-${settings.displayMode}`);
 
   DIGITAL_STYLES.forEach((style) => dom.digitalClock.classList.remove(`style-${style.id}`));
   dom.digitalClock.classList.add(`style-${settings.digitalStyleId}`);
+
+  FLIP_MOTIONS.forEach((motion) => dom.digitalClock.classList.remove(`flip-motion-${motion.id}`));
+  dom.digitalClock.classList.add(`flip-motion-${settings.flipMotionId}`);
 
   buildClockFace(getActiveTheme().dial);
   buildDigitalClockStructure();
@@ -2487,8 +2524,10 @@ function createFlipCard(initialText) {
 
   /* Den fasta nedre halvan får det nya värdet först när bladet landat,
      annars ser man siffran byta innan bladet hunnit täcka den. */
+  /* Lyssnar på vilket element som slutat, inte på animationens namn. Namnet
+     skiljer sig mellan rörelserna, och skuggan på ::after avfyras separat. */
   card.addEventListener("animationend", (event) => {
-    if (event.animationName !== FLIP_LEAF_LAND_ANIMATION) return;
+    if (event.target !== leafBottom.layer || event.pseudoElement) return;
     cardState.staticBottom.textContent = cardState.currentText;
     card.classList.remove(CLASS_FLIPPING);
   });
@@ -2672,11 +2711,16 @@ function formatDuration(milliseconds) {
 /* Sorteras på klockslag så att rasterna kan ligga i vilken ordning som helst. */
 function getBreakEvents(now) {
   return [
-    { label: "Start", targetTime: parseTimeToday(settings.startTime, now), isWorkdayBoundary: true },
-    { label: "Frukost", targetTime: parseTimeToday(settings.breakfastTime, now) },
-    { label: "Lunch", targetTime: parseTimeToday(settings.lunchTime, now) },
-    { label: "Fika", targetTime: parseTimeToday(settings.coffeeBreakTime, now) },
-    { label: "Hemgång", targetTime: parseTimeToday(settings.homeTime, now), isWorkdayBoundary: true }
+    { label: "Start", alertMessage: "Arbetsdagen börjar",
+      targetTime: parseTimeToday(settings.startTime, now), isWorkdayBoundary: true },
+    { label: "Frukost", alertMessage: "Dags för frukost",
+      targetTime: parseTimeToday(settings.breakfastTime, now) },
+    { label: "Lunch", alertMessage: "Dags för lunch",
+      targetTime: parseTimeToday(settings.lunchTime, now) },
+    { label: "Fika", alertMessage: "Dags för fika",
+      targetTime: parseTimeToday(settings.coffeeBreakTime, now) },
+    { label: "Hemgång", alertMessage: "Dags att gå hem",
+      targetTime: parseTimeToday(settings.homeTime, now), isWorkdayBoundary: true }
   ].sort((first, second) => first.targetTime - second.targetTime);
 }
 
@@ -2693,20 +2737,16 @@ function getBreakState(now) {
 }
 
 function updateBreakCountdown(now) {
-  if (settings.countdownMode === "hidden") return;
+  if (!settings.showBreakCountdown) return;
 
   const state = getBreakState(now);
   if (state.hasUpcomingToday) {
     dom.breakLabel.textContent = `Till ${state.label}`;
     dom.breakCountdown.textContent = formatDuration(state.targetTime - now);
-    /* Texten byts under tiden bandet rullar. Att skriva textContent startar
-       inte om animationen, så rörelsen fortsätter obruten. */
-    dom.marqueeText.textContent = `Till ${state.label} ${formatDuration(state.targetTime - now)}`;
     return;
   }
   dom.breakLabel.textContent = `Nästa: ${state.label}`;
   dom.breakCountdown.textContent = `imorgon ${formatHoursMinutes(state.targetTime)}`;
-  dom.marqueeText.textContent = `Nästa: ${state.label} imorgon ${formatHoursMinutes(state.targetTime)}`;
 }
 
 let audioContext = null;
@@ -2746,6 +2786,20 @@ function playChime(chimeProfile) {
     oscillator.start(noteStart);
     oscillator.stop(noteStart + CHIME_RELEASE_S + CHIME_STOP_PADDING_S);
   });
+}
+
+let marqueeTimeoutId = null;
+
+/* Bandet är en varning, inte en ständig ticker. Det visas när larmet går och
+   försvinner av sig självt en stund senare. */
+function showAlertMarquee(message) {
+  dom.marqueeText.textContent = message;
+  dom.breakMarquee.classList.remove(CLASS_HIDDEN);
+
+  if (marqueeTimeoutId !== null) clearTimeout(marqueeTimeoutId);
+  marqueeTimeoutId = setTimeout(() => {
+    dom.breakMarquee.classList.add(CLASS_HIDDEN);
+  }, MARQUEE_ALERT_DURATION_MS);
 }
 
 function flashPage() {
@@ -2835,10 +2889,14 @@ function checkBreakChime(now) {
 
     /* Arbetsdagens gränser varnas oberoende av rasterna — de ska kunna gå
        fram även för den som stängt av pling vid fika. */
-    const wantsSound = event.isWorkdayBoundary ? settings.workdayAlertSound : settings.breakAlertSound;
-    const wantsFlash = event.isWorkdayBoundary ? settings.workdayAlertFlash : settings.breakAlertFlash;
-    if (wantsSound) playChime(event.isWorkdayBoundary ? HOME_CHIME : BREAK_CHIME);
-    if (wantsFlash) flashPage();
+    const isBoundary = event.isWorkdayBoundary === true;
+    if (isBoundary ? settings.workdayAlertSound : settings.breakAlertSound) {
+      playChime(isBoundary ? HOME_CHIME : BREAK_CHIME);
+    }
+    if (isBoundary ? settings.workdayAlertFlash : settings.breakAlertFlash) flashPage();
+    if (isBoundary ? settings.workdayAlertMarquee : settings.breakAlertMarquee) {
+      showAlertMarquee(event.alertMessage);
+    }
   });
 }
 
@@ -3908,10 +3966,11 @@ buildSelectOptions(dom.themeSelect, THEMES, false);
 buildSelectOptions(dom.nameFontSelect, FONT_OPTIONS, true);
 buildSelectOptions(dom.clockFontSelect, FONT_OPTIONS, true);
 buildSelectOptions(dom.digitalStyleSelect, DIGITAL_STYLES, false);
-buildSelectOptions(dom.countdownModeSelect, COUNTDOWN_MODES, false);
+buildSelectOptions(dom.flipMotionSelect, FLIP_MOTIONS, false);
 
 function updateConditionalRows() {
   dom.clockFontRow.classList.toggle(CLASS_HIDDEN, settings.useSameFontForClock);
+  dom.flipMotionRow.classList.toggle(CLASS_HIDDEN, settings.digitalStyleId !== "flip");
   dom.customColorsRow.classList.toggle(CLASS_HIDDEN, !settings.useCustomColors);
 }
 
@@ -4165,11 +4224,13 @@ function readServiceWorkerCacheVersion() {
 }
 
 async function showVersionInformation() {
+  // Läses före väntan — då spelar det ingen roll vad som hunnit hända sedan
+  const fileDate = formatSwedishDateTime(document.lastModified);
   const cacheVersion = await readServiceWorkerCacheVersion();
   /* Filens datum kommer från serverns svar och behöver inte underhållas.
      Visar det ett gammalt datum är det cachen som är efter, inte servern. */
   dom.versionLine.textContent =
-    `Version ${APP_VERSION} · Filens datum ${formatSwedishDateTime(document.lastModified)} · ` +
+    `Version ${APP_VERSION} · Filens datum ${fileDate} · ` +
     `Cache ${cacheVersion ?? NO_SERVICE_WORKER_LABEL}`;
 }
 
