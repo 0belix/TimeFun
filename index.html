@@ -36,7 +36,15 @@
     --control-background: rgba(128, 128, 128, 0.15);
     --control-border: rgba(128, 128, 128, 0.40);
 
+    --digital-font-size: clamp(2.2rem, 9vmin, 5.5rem);
     --flip-card-height: 1.32em;
+    /* Fasta mått i em gör radens totala bredd förutsägbar oavsett typsnitt:
+       6 kort + 2 kolon + 7 mellanrum = 6,26 em. Utan dem beror bredden på
+       hur bred just den siffran råkar vara i just det typsnittet. */
+    --flip-card-width: 0.86em;
+    --flip-colon-width: 0.34em;
+    --flip-gap: 0.06em;
+    --flip-row-width-em: 6.4;
     --flip-leaf-duration: 130ms;
     /* Opak yta: ett genomskinligt kort låter det vikande bladet lysa igenom
        och då faller hela illusionen. */
@@ -443,7 +451,7 @@
   #digital-clock {
     font-family: var(--digital-font);
     color: var(--foreground-color);
-    font-size: clamp(2.2rem, 9vmin, 5.5rem);
+    font-size: var(--digital-font-size);
     letter-spacing: var(--digital-letter-spacing);
     line-height: 1;
     font-variant-numeric: tabular-nums;
@@ -452,7 +460,7 @@
     gap: 0.15em;
     filter: var(--dial-glow);
   }
-  #digital-clock.style-flip { gap: 0.5vmin; letter-spacing: 0; }
+  #digital-clock.style-flip { gap: var(--flip-gap); letter-spacing: 0; }
   .flip-card {
     position: relative;
     display: inline-block;
@@ -468,8 +476,7 @@
   .flip-sizer {
     display: block;
     visibility: hidden;
-    padding: 0 0.16em;
-    min-width: 0.6em;
+    width: var(--flip-card-width);
     text-align: center;
     line-height: var(--flip-card-height);
   }
@@ -573,7 +580,7 @@
   @keyframes flip-shade-deepen { from { opacity: 0; } to { opacity: 0.45; } }
   @keyframes flip-shade-lift { from { opacity: 0.45; } to { opacity: 0; } }
 
-  .flip-colon { opacity: 0.65; padding: 0 0.3vmin; }
+  .flip-colon { opacity: 0.65; width: var(--flip-colon-width); text-align: center; }
 
   /* ---------- Väckarklocka ----------
      De släckta segmenten ligger kvar svagt bakom siffrorna. Det är dem man
@@ -724,7 +731,7 @@
   #app.mode-analog #digital-wrap { display: none; }
   #app.mode-digital #clock-wrap,
   #app.mode-digital #clock-dots { display: none; }
-  #app.mode-digital #digital-clock { font-size: clamp(3rem, 15vmin, 8.5rem); }
+  #app.mode-digital { --digital-font-size: clamp(3rem, 15vmin, 8.5rem); }
   #app.mode-analog #clock-wrap { width: min(76vmin, 90vw); height: min(76vmin, 90vw); }
 
   /* ---------- Flytande knappar ---------- */
@@ -777,6 +784,9 @@
 
   #break-timer {
     position: fixed;
+    display: flex;
+    align-items: baseline;
+    gap: 0.7em;
     top: 1.6vmin;
     left: 1.6vmin;
     background: var(--control-background);
@@ -1042,8 +1052,8 @@
     .style-dots .dot { width: 4px; height: 4px; }
 
     /* Bredden är det som tar slut först — åtta tecken ska rymmas på raden */
-    #digital-clock { font-size: min(11vw, 14vmin); }
-    #app.mode-digital #digital-clock { font-size: min(16vw, 26vmin); }
+    :root { --digital-font-size: min(11vw, 14vmin); }
+    #app.mode-digital { --digital-font-size: min(16vw, 26vmin); }
     #clock-wrap { width: min(50vmin, 60vw); height: min(50vmin, 60vw); }
     #app.mode-analog #clock-wrap { width: min(80vmin, 88vw); height: min(80vmin, 88vw); }
 
@@ -1057,14 +1067,9 @@
     #names, .style-dots, #wake-warning,
     #fullscreen-button, #qr-button { display: none !important; }
 
-    #break-timer {
-      top: 2px; left: 2px;
-      padding: 2px 6px;
-      border-radius: 8px;
-      line-height: 1.15;
-    }
-    #break-label { font-size: 8px; letter-spacing: 0.03em; }
-    #break-countdown { font-size: 11px; font-weight: 700; }
+    #break-timer { top: 2px; left: 2px; padding: 2px 7px; border-radius: 8px; gap: 0.5em; }
+    #break-label { font-size: 9px; letter-spacing: 0.03em; }
+    #break-countdown { font-size: 12px; font-weight: 700; }
 
     /* Kugghjulet blir kvar, annars går det inte att ta sig ur läget */
     #settings-button {
@@ -1075,13 +1080,9 @@
     }
     #settings-button:hover, #settings-button:focus-visible { opacity: 1; }
 
-    #digital-clock,
-    #app.mode-digital #digital-clock { font-size: min(17vw, 52vmin); }
+    :root, #app.mode-digital { --digital-font-size: min(17vw, 52vmin); }
     #app.mode-analog #clock-wrap { width: min(96vmin, 96vw); height: min(96vmin, 96vw); }
 
-    /* Smalare kort — varje sparad tiondels em är en större siffra */
-    .flip-sizer { padding: 0 0.1em; min-width: 0.55em; }
-    #digital-clock.style-flip { gap: 0.3vmin; }
 
     /* Panelerna måste ta hela rutan för att gå att använda alls */
     .overlay .panel {
@@ -1113,6 +1114,36 @@
       width: min(96vmin, 96vw);
       height: min(96vmin, 96vw);
     }
+  }
+
+  /* Flip-raden är exakt så här många em bred, oavsett typsnitt. Bredden kan
+     därför garanteras i förväg i stället för mätas i efterhand. */
+  #digital-clock.style-flip {
+    font-size: min(var(--digital-font-size), calc((100vw - 16px) / var(--flip-row-width-em)));
+  }
+
+  /* Installerad som app visar Chrome annars en titelrad med "Klockan". Med
+     window-controls-overlay försvinner den och sidan ritar ända upp — bara
+     minimera- och stängknappen blir kvar uppe till höger. */
+  #drag-strip { display: none; }
+
+  @media (display-mode: window-controls-overlay) {
+    /* Utan en dragbar yta går fönstret inte att flytta när titelraden är borta */
+    #drag-strip {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: env(titlebar-area-x, 0);
+      width: env(titlebar-area-width, 100%);
+      height: env(titlebar-area-height, 32px);
+      -webkit-app-region: drag;
+      app-region: drag;
+      z-index: var(--layer-toast);
+    }
+    /* Knappar och nedräkning flyttas undan från fönsterknapparna */
+    #settings-button { top: calc(env(titlebar-area-height, 32px) + 0.6vmin); }
+    #break-timer { top: calc(env(titlebar-area-height, 32px) + 0.6vmin); }
+    #break-marquee { top: env(titlebar-area-height, 32px); }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1152,6 +1183,7 @@
   </div>
 </div>
 
+<div id="drag-strip" aria-hidden="true"></div>
 <div id="page-flash" aria-hidden="true"></div>
 <div id="style-toast" role="status" aria-live="polite"></div>
 
@@ -1497,7 +1529,7 @@ const FLIP_WIDTH_REFERENCE_DIGIT = "0";
 const SWEEP_CYCLE_SECONDS = 60;
 
 const SERVICE_WORKER_PATH = "sw.js";
-const APP_VERSION = "3.5";
+const APP_VERSION = "3.6";
 /* Samma sträng som i sw.js — det är protokollet dem emellan */
 const VERSION_REQUEST_MESSAGE = "vilken-cacheversion";
 const VERSION_REPLY_TIMEOUT_MS = 800;
@@ -2702,7 +2734,10 @@ function fitDigitalClock() {
   dom.digitalClock.style.transform = "";
   if (settings.displayMode === "analog") return;
 
-  const appStyle = getComputedStyle(dom.app);
+  /* Klockan kan ha flyttats till ett eget fönster, och då ligger den i ett
+     annat dokument än det här skriptet. Måtten måste läsas där den faktiskt är. */
+  const view = dom.app.ownerDocument.defaultView ?? window;
+  const appStyle = view.getComputedStyle(dom.app);
   const availableWidth = dom.app.clientWidth
     - Number.parseFloat(appStyle.paddingLeft) - Number.parseFloat(appStyle.paddingRight);
   const contentWidth = dom.digitalClock.scrollWidth;
