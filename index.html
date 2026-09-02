@@ -1146,6 +1146,29 @@
     #break-marquee { top: env(titlebar-area-height, 32px); }
   }
 
+  /* Installerad som app i ett lågt fönster — klockan i ett skärmhörn. Att bara
+     flytta nedräkningen och kugghjulet nedanför titelraden räcker inte där:
+     klockan centreras i hela rutan, och under ungefär 215 px höjd hamnar den
+     bakom dem. Titelradens egen yta står tom, så de får flytta upp dit. */
+  @media (display-mode: window-controls-overlay) and (max-height: 300px) {
+    #break-timer, #settings-button {
+      /* Dragytan ligger på --layer-toast och skulle annars äta både klick och
+         synlighet. Undantaget måste sättas på elementen, annars går kugghjulet
+         inte att trycka på. */
+      z-index: calc(var(--layer-toast) + 1);
+      -webkit-app-region: no-drag;
+      app-region: no-drag;
+      top: calc(env(titlebar-area-height, 32px) / 2);
+      transform: translateY(-50%);
+    }
+    #break-timer { left: calc(env(titlebar-area-x, 0px) + 4px); }
+
+    /* Innanför fönsterknapparna, räknat från titelradsytans egen högerkant */
+    #settings-button {
+      right: calc(100% - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100%) + 4px);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     html, body, #style-toast, .style-dots .dot { transition: none; }
     .flip-card.is-flipping .flip-leaf,
