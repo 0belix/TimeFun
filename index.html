@@ -541,6 +541,15 @@
   }
 
   /* --- Rulle: siffrorna glider uppåt som på en vägmätare --- */
+  /* Rullen skjuter bladen ut ur kortet med translateY(±100%). Utan en klippande
+     kant fortsätter de synligt förbi kortet — den utgående siffran hänger kvar
+     som ett spöke ovanför, och i ett litet fönster glider den utanför skärmen.
+     Klippningen sitter bara på rullen: overflow plattar ut 3D-rymden, och den
+     behöver fallbladet för sin rotation. Rullen är ren translateY och klarar sig. */
+  .flip-motion-roll .flip-card {
+    overflow: hidden;
+    transform-style: flat;
+  }
   .flip-motion-roll .flip-card.is-flipping .flip-leaf-top {
     animation: flip-leaf-roll-out var(--flip-leaf-duration) ease-in both;
   }
