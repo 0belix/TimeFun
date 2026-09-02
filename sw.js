@@ -9,13 +9,16 @@
    då fastnar plattan på gamla filer utan att något syns.
    ========================================================================== */
 
-const CACHE_VERSION = "klockan-v8";
+const CACHE_VERSION = "klockan-v9";
 const APP_START_PAGE = "./index.html";
 
 /* Filer som ska finnas i cachen direkt vid installationen. */
 const APP_SHELL_PATHS = Object.freeze([
   "./",
   APP_START_PAGE,
+  /* Sidan bakom påskäggets QR-kod. Den delar quotes.js med klockan, så utan
+     den här raden fanns modulen offline men inte sidan som använder den. */
+  "./ordsprak.html",
   "./quotes.js",
   "./logo.png",
   "./manifest.json",
@@ -87,17 +90,26 @@ self.addEventListener("activate", (event) => {
    ========================================================================== */
 
 /* Sidan hämtas i första hand från nätet, så att en ny version slår igenom vid
-   nästa laddning. Först när nätet inte svarar används den sparade kopian. */
+   nästa laddning. Först när nätet inte svarar används den sparade kopian.
+
+   Varje sida sparas under sin egen adress. Skrevs de alla under startsidans
+   nyckel räckte ett besök på ordspråkssidan för att skriva över den cachade
+   klockan — och då startade väggplattan i ordspråket nästa gång nätet låg
+   nere, utan att något syntes som fel. */
 async function respondWithNetworkFirst(request) {
   const cache = await caches.open(CACHE_VERSION);
 
   try {
     const response = await fetch(request);
-    if (response.ok) cache.put(APP_START_PAGE, response.clone());
+    if (response.ok) cache.put(request, response.clone());
     return response;
   } catch (error) {
-    const cachedPage = await cache.match(APP_START_PAGE);
+    const cachedPage = await cache.match(request);
     if (cachedPage !== undefined) return cachedPage;
+
+    /* Okänd adress utan nät: klockan är ett bättre svar än ett felmeddelande. */
+    const cachedStartPage = await cache.match(APP_START_PAGE);
+    if (cachedStartPage !== undefined) return cachedStartPage;
     throw error;
   }
 }
