@@ -541,6 +541,15 @@
   }
 
   /* --- Rulle: siffrorna glider uppåt som på en vägmätare --- */
+  /* Rullen skjuter bladen ut ur kortet med translateY(±100%). Utan en klippande
+     kant fortsätter de synligt förbi kortet — den utgående siffran hänger kvar
+     som ett spöke ovanför, och i ett litet fönster glider den utanför skärmen.
+     Klippningen sitter bara på rullen: overflow plattar ut 3D-rymden, och den
+     behöver fallbladet för sin rotation. Rullen är ren translateY och klarar sig. */
+  .flip-motion-roll .flip-card {
+    overflow: hidden;
+    transform-style: flat;
+  }
   .flip-motion-roll .flip-card.is-flipping .flip-leaf-top {
     animation: flip-leaf-roll-out var(--flip-leaf-duration) ease-in both;
   }
@@ -1144,6 +1153,29 @@
     #settings-button { top: calc(env(titlebar-area-height, 32px) + 0.6vmin); }
     #break-timer { top: calc(env(titlebar-area-height, 32px) + 0.6vmin); }
     #break-marquee { top: env(titlebar-area-height, 32px); }
+  }
+
+  /* Installerad som app i ett lågt fönster — klockan i ett skärmhörn. Att bara
+     flytta nedräkningen och kugghjulet nedanför titelraden räcker inte där:
+     klockan centreras i hela rutan, och under ungefär 215 px höjd hamnar den
+     bakom dem. Titelradens egen yta står tom, så de får flytta upp dit. */
+  @media (display-mode: window-controls-overlay) and (max-height: 300px) {
+    #break-timer, #settings-button {
+      /* Dragytan ligger på --layer-toast och skulle annars äta både klick och
+         synlighet. Undantaget måste sättas på elementen, annars går kugghjulet
+         inte att trycka på. */
+      z-index: calc(var(--layer-toast) + 1);
+      -webkit-app-region: no-drag;
+      app-region: no-drag;
+      top: calc(env(titlebar-area-height, 32px) / 2);
+      transform: translateY(-50%);
+    }
+    #break-timer { left: calc(env(titlebar-area-x, 0px) + 4px); }
+
+    /* Innanför fönsterknapparna, räknat från titelradsytans egen högerkant */
+    #settings-button {
+      right: calc(100% - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100%) + 4px);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
